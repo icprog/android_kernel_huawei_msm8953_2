@@ -1,29 +1,6 @@
 #ifndef __LINUX_NL80211_H
 #define __LINUX_NL80211_H
-/*
- * 802.11 netlink interface public header
- *
- * Copyright 2006-2010 Johannes Berg <johannes@sipsolutions.net>
- * Copyright 2008 Michael Wu <flamingice@sourmilk.net>
- * Copyright 2008 Luis Carlos Cobo <luisca@cozybit.com>
- * Copyright 2008 Michael Buesch <m@bues.ch>
- * Copyright 2008, 2009 Luis R. Rodriguez <lrodriguez@atheros.com>
- * Copyright 2008 Jouni Malinen <jouni.malinen@atheros.com>
- * Copyright 2008 Colin McCabe <colin@cozybit.com>
- *
- * Permission to use, copy, modify, and/or distribute this software for any
- * purpose with or without fee is hereby granted, provided that the above
- * copyright notice and this permission notice appear in all copies.
- *
- * THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
- * WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
- * MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
- * ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
- * WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
- * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
- * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
- *
- */
+
 
 #include <linux/types.h>
 
@@ -92,38 +69,7 @@
  * below.
  */
 
-/**
- * DOC: Virtual interface / concurrency capabilities
- *
- * Some devices are able to operate with virtual MACs, they can have
- * more than one virtual interface. The capability handling for this
- * is a bit complex though, as there may be a number of restrictions
- * on the types of concurrency that are supported.
- *
- * To start with, each device supports the interface types listed in
- * the %NL80211_ATTR_SUPPORTED_IFTYPES attribute, but by listing the
- * types there no concurrency is implied.
- *
- * Once concurrency is desired, more attributes must be observed:
- * To start with, since some interface types are purely managed in
- * software, like the AP-VLAN type in mac80211 for example, there's
- * an additional list of these, they can be added at any time and
- * are only restricted by some semantic restrictions (e.g. AP-VLAN
- * cannot be added without a corresponding AP interface). This list
- * is exported in the %NL80211_ATTR_SOFTWARE_IFTYPES attribute.
- *
- * Further, the list of supported combinations is exported. This is
- * in the %NL80211_ATTR_INTERFACE_COMBINATIONS attribute. Basically,
- * it exports a list of "groups", and at any point in time the
- * interfaces that are currently active must fall into any one of
- * the advertised groups. Within each group, there are restrictions
- * on the number of interfaces of different types that are supported
- * and also the number of different channels, along with potentially
- * some other restrictions. See &enum nl80211_if_combination_attrs.
- *
- * All together, these attributes define the concurrency of virtual
- * interfaces that a given device supports.
- */
+
 
 /**
  * DOC: packet coalesce support

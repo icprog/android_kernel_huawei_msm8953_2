@@ -1362,12 +1362,7 @@ static void mdss_mdp_perf_calc_mixer(struct mdss_mdp_mixer *mixer,
 		bitmap_or(perf->bw_vote_mode, perf->bw_vote_mode,
 			tmp.bw_vote_mode, MDSS_MDP_BW_MODE_MAX);
 
-		/*
-		 * for async layers, the overlap calculation is skipped
-		 * and the bandwidth is added at the end, accounting for
-		 * worst case, that async layer might overlap with
-		 * all the other layers.
-		 */
+		
 		if (pipe->async_update) {
 			bw_overlap[i] = 0;
 			v_region[2*i] = 0;
