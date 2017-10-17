@@ -443,6 +443,12 @@ config SND_SOC_MAX98095
 config SND_SOC_MAX9850
 	tristate
 
+config SND_SOC_MAX98925
+	bool "Support MAX98925 smartpa system"
+	depends on I2C
+	help
+	MAX98925 driver for smartpa system.
+
 config SND_SOC_PCM1681
 	tristate "Texas Instruments PCM1681 CODEC"
 	depends on I2C
