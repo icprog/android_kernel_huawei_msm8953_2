@@ -4,10 +4,6 @@
 
 # Each configuration option enables a list of files.
 
-ifeq ($(COMPILE_FEIMA3),true)
-CFLAGS_KERNEL +=-DFEIMA3_FLAG
-endif
-
 obj-$(CONFIG_TOUCHSCREEN_CYPRESS_CYTTSP5)	+= cyttsp5.o
 cyttsp5-y := cyttsp5_core.o cyttsp5_mt_common.o
 cyttsp5-$(CONFIG_TOUCHSCREEN_CYPRESS_CYTTSP5_MT_A) += cyttsp5_mta.o

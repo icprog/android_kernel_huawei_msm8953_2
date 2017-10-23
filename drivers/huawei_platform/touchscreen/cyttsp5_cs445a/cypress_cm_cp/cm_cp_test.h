@@ -87,11 +87,6 @@ struct gd_sensor {
     int gradient_val;
 };
 
-extern int cm_cp_test_run_ttda(struct device *dev,
-            struct file *configuration_file,
-            struct seq_file *result_file,  bool run_cm_test,
-            bool run_cp_test, bool *cm_test_pass, bool *cp_test_pass);
-
 extern int cm_cp_test_run(char *device_path, struct file *parameter_file,
 		struct file *configuration_file, struct seq_file *result_file,
 		int vdda, bool run_cm_test, bool run_cp_test,

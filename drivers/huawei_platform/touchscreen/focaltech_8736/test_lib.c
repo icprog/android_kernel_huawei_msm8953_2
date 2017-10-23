@@ -186,12 +186,12 @@ boolean start_test_tp(void)
 		*/
 		case IC_FT8716>>4:
 			bTestResult = FT8716_StartTest();
-			break;
+			break;	
 		case IC_FT8736>>4:
 			bTestResult = FT8736_StartTest();
-			break;
+			break;			
 		default:
-			bTestResult = FT8716_StartTest();
+			bTestResult = FT8736_StartTest();
 			printk("[focal]  Error IC, IC Name: %s, IC Code:  %d %d   \n", g_strIcName, g_ScreenSetParam.iSelectedIC,IC_FT8736);
 			break;
 		}

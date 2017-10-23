@@ -1,35 +1,6 @@
-/*
- *
- * FocalTech fts TouchScreen driver.
- * 
- * Copyright (c) 2010-2015, Focaltech Ltd. All rights reserved.
- *
- * This software is licensed under the terms of the GNU General Public
- * License version 2, as published by the Free Software Foundation, and
- * may be copied, distributed, and modified under those terms.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- */
 
- /*******************************************************************************
-*
-* File Name: Focaltech_ex_fun.c
-*
-* Author: Xu YongFeng
-*
-* Created: 2015-01-29
-*   
-* Modify by mshl on 2015-10-26
-*
-* Abstract:
-*
-* Reference:
-*
-*******************************************************************************/
+
+ 
 
 /*******************************************************************************
 * 1.Included header files
@@ -56,7 +27,7 @@
 #define WRITE_BUF_SIZE		512
 #define READ_BUF_SIZE		512
 
-#define FTS_RAW_DATA_SIZE (PAGE_SIZE*4)
+#define FTS_RAW_DATA_SIZE (PAGE_SIZE*2)
 
 /*******************************************************************************
 * Private enumerations, structures and unions using typedef
@@ -768,33 +739,11 @@ static ssize_t hw_touch_test_type_show(struct kobject *dev,
 		TP_JUDGE_LAST_RESULT);
 }
 
-static ssize_t touch_chip_info_show(struct device *dev, struct device_attribute *attr, char *buf)
-{
-	char reg_addr = 0xa6;
-	char reg_value = 0;
-	int err = 0;
-	struct i2c_client *client = fts_i2c_client;
-
-	err = fts_i2c_read(client, &reg_addr, 1, &reg_value, 1);
-	if (err < 0)
-		FTS_COMMON_DBG("%s,focal_fw_version read failed\n",__func__);
-
-	 return snprintf(buf, PAGE_SIZE - 1, "Focal8716-MLA-tianma-fw_version_0%x\n", reg_value);
-}
-
 static ssize_t  hw_touch_chip_info_show(struct kobject *dev,
 		struct kobj_attribute *attr, char *buf)
 {
-	char reg_addr = 0xa6;
-	char reg_value = 0;
-	int err = 0;
-	struct i2c_client *client = fts_i2c_client;
 
-	err = fts_i2c_read(client, &reg_addr, 1, &reg_value, 1);
-	if (err < 0)
-		FTS_COMMON_DBG("%s,focal_fw_version read failed\n",__func__);
-
-	 return snprintf(buf, PAGE_SIZE - 1, "Focal8716-MLA-tianma-fw_version_0%x\n", reg_value);
+	 return snprintf(buf, PAGE_SIZE - 1, "Focal8716-MLA-tianma-fw_version_0%d\n", g_fw_version_info);
 }
 
 extern struct i2c_client *fts_i2c_client;
@@ -840,11 +789,6 @@ static ssize_t fts_holster_func_store(struct kobject *dev,
 
 	memcpy(&g_CoverStatusBufBak[0],&i2c_write_buf[0],10);
 
-	if (g_suspend_state) {
-		FTS_COMMON_DBG("panel is suspend,do not store holster\n");
-		goto out;
-	}
-
 	for(i = 1; i < sizeof(i2c_write_buf); i++)
 	{
 		ret = fts_write_reg(client, regaddr++, i2c_write_buf[i]);
@@ -853,6 +797,8 @@ static ssize_t fts_holster_func_store(struct kobject *dev,
 			ERROR_COMMON_FTS("[Focal] %s : Could not write the register(0x%02x).fts_write_reg return:%d.\n", __func__, regaddr, ret);
 			goto out;
 		}
+		else
+			FTS_COMMON_DBG("[Focal] %s : Write into register(0x%02x) successful.\n", __func__,  regaddr);
 	}
 out:
 	mutex_unlock(&fts_input_dev->mutex);
@@ -864,7 +810,7 @@ static ssize_t fts_holster_func_show(struct kobject *dev,
 		struct kobj_attribute *attr, char *buf)
 {
 	int ret = 0;
-	struct i2c_client *client = fts_i2c_client;
+	struct i2c_client *client = fts_i2c_client;	
 	ssize_t num_read_chars = 0;
 	u8 regaddr=0x8C;
 	u8 readbuf[9] = {0};
@@ -873,13 +819,8 @@ static ssize_t fts_holster_func_show(struct kobject *dev,
 	int x1 = 0;
 	int y1 = 0;
 	int nenable = 0;
-
 	FTS_DBG("");
-	if (g_suspend_state) {
-		FTS_COMMON_DBG("panel is suspend,do not show holster\n");
-		return num_read_chars;
-	}
-	mutex_lock(&fts_input_dev->mutex);
+	mutex_lock(&fts_input_dev->mutex);	
 	FTS_DBG("[focal] regaddr:(0x%02x)\n", regaddr);
 	ret = fts_i2c_read(client, (char*)&regaddr, 1, readbuf, 9);
 	if (ret < 0)
@@ -914,19 +855,14 @@ static ssize_t hw_holster_func_show(struct kobject *dev,
 	return fts_holster_func_show(dev, attr, buf);
 }
 static ssize_t fts_glove_func_show(struct kobject *dev,
-		struct kobj_attribute *attr, char *buf)
+		struct kobj_attribute *attr, char *buf)		
 {
 	int ret = 0;
-	struct i2c_client *client = fts_i2c_client;
+	struct i2c_client *client = fts_i2c_client;	
 	ssize_t num_read_chars = 0;
 	u8 regaddr=0xC0;
 	u8 regvalue=0x00;
-
 	FTS_DBG("");
-	if (g_suspend_state) {
-		FTS_COMMON_DBG("panel is suspend,do not show glove\n");
-		return num_read_chars;
-	}
 	mutex_lock(&fts_input_dev->mutex);	
 	FTS_DBG("[focal] regaddr:(0x%02x)\n", regaddr);
 	ret = fts_read_reg(client, regaddr, &regvalue);
@@ -953,9 +889,9 @@ static ssize_t fts_glove_func_store(struct kobject *dev,
 	struct i2c_client *client = fts_i2c_client;
 	u8 regaddr=0xC0;
 	u8 regvalue=0x00;
-
 	FTS_DBG("Func:%s\n", __func__);
-	mutex_lock(&fts_input_dev->mutex);
+	FTS_DBG("");
+	mutex_lock(&fts_input_dev->mutex);	
 	ret = kstrtoul(buf, 10, &value);
 	FTS_DBG("%s: value=%d\n", __func__, (unsigned int)value);
 	if (ret < 0){
@@ -973,19 +909,11 @@ static ssize_t fts_glove_func_store(struct kobject *dev,
 		g_ucGloveStatusBak = 1;
 	}
 
-	if (g_suspend_state) {
-		FTS_COMMON_DBG("panel is suspend,do not store glove_enable\n");
-                ret = size;
-		goto out;
-	}
-
 	ret = fts_write_reg(client, regaddr, regvalue);
 	if (ret < 0)
 		ERROR_COMMON_FTS("[Focal] %s : Could not write the register(0x%02x).fts_write_reg return:%d.\n", __func__, regaddr, ret);
-	else {
+	else
 		FTS_COMMON_DBG("[Focal] %s : Write 0x%02x into register(0x%02x) successful.\n", __func__, regvalue, regaddr);
-                ret = size;
-        }
 out:
 	mutex_unlock(&fts_input_dev->mutex);
 	return ret;
@@ -1046,13 +974,7 @@ static int fts_rawdata_proc_show(struct seq_file *m, void *v)
 	if (m->size <= FTS_RAW_DATA_SIZE) {
 		m->count = m->size;
 		return 0;
-	}
-	if(ft8607_cap_test_fake_status)
-	{	
-		ERROR_COMMON_FTS("%s TRT_cap_test_fake_status: %d\n", __func__, ft8607_cap_test_fake_status);
-		seq_printf(m, "%s\n", "0P-1P-2P-3P-ft8607-cmi");
-		return 0;
-	}
+	}     
 	proc_buf = (char *)kzalloc(FTS_RAW_DATA_SIZE, GFP_KERNEL);
 	if (!proc_buf) {
 		ERROR_COMMON_FTS(" Faild to kzalloc proc_buf\n");
@@ -1126,20 +1048,11 @@ static int fts_set_roi_switch(u8 roi_switch)
 		g_Roi_Enable_9B_RegValue = 0;
 	}
 	FTS_COMMON_DBG("%s,roi_enable = %d\n", __func__, g_Roi_Enable_9B_RegValue);
-
-	if (g_suspend_state) {
-		gu_roi= (u8)temp_roi_switch;
-		FTS_COMMON_DBG("panel is suspend,do not set roi_enable_store\n");
-		return -1;
-	}
-
 	write_buf[0] = (u8)roi_ctrl_addr;
 	write_buf[1] = (u8)temp_roi_switch;
 	retval = fts_i2c_write(fts_i2c_client, write_buf, 2);
 	if (retval < 0) {
-		gu_roi= (u8)temp_roi_switch;
-		FTS_COMMON_DBG("set %s failed: %d, roi_ctrl_write_addr=0x%04x, roi_enable: %d\n",
-			__func__, retval, roi_ctrl_addr, gu_roi);
+		FTS_COMMON_DBG("set %s failed: %d, roi_ctrl_write_addr=0x%04x\n", __func__, retval, roi_ctrl_addr);
 		return retval;
 	}
 	else
@@ -1202,10 +1115,6 @@ static ssize_t ts_roi_enable_show(struct device *dev, struct device_attribute *a
 	unsigned int value = 0;
 	int error = 0;
 
-	if (g_suspend_state) {
-		FTS_COMMON_DBG("panel is suspend,do not read roi_enable\n");
-		goto out;
-	}
 	error = fts_read_roi_switch(&value);
 	if (error < 0) {
 		FTS_COMMON_DBG("%s failed, error code is %d\n", __func__, error);
@@ -1311,16 +1220,10 @@ static DEVICE_ATTR(roi_enable,
 					ts_roi_enable_show,
 					ts_roi_enable_store);
 
-static DEVICE_ATTR(touch_chip_info,
-					S_IRUGO | S_IWUSR | S_IWGRP,
-					touch_chip_info_show,
-					NULL);
-
 static struct attribute *ts_roi_attributes[] = {
 	&dev_attr_roi_enable.attr,
 	&dev_attr_roi_data.attr,
-	&dev_attr_roi_data_debug.attr,
-	&dev_attr_touch_chip_info.attr,
+	&dev_attr_roi_data_debug.attr,	
 	NULL
 };
 
@@ -1389,7 +1292,7 @@ int fts_create_sysfs(struct i2c_client * client)
 		ERROR_COMMON_FTS("%s: Error, get kobj failed!\n", __func__);
 		return -ENODEV;
 	}
-
+	FTS_COMMON_DBG("5");
 	err = sysfs_create_file(glove_kobj, &hw_touch_glove_func.attr);
 	if (err)
 	{
@@ -1402,28 +1305,33 @@ int fts_create_sysfs(struct i2c_client * client)
 		return -ENODEV;
 		}
 	}
-
+	FTS_COMMON_DBG("4");
+	
 	err = sysfs_create_group(&client->dev.kobj, &fts_attribute_group);
-	if (0 != err)
+	if (0 != err) 
 	{
 		dev_err(&client->dev, "[FTS] %s() - ERROR: sysfs_create_group() failed.\n", __func__);
 		sysfs_remove_group(&client->dev.kobj, &fts_attribute_group);
 		return -EIO;
-	}
-	else
+	} 
+	else 
 	{
 		pr_info("[FTS]:%s() - sysfs_create_group() succeeded.\n",__func__);
 	}
 	proc_entry = proc_mkdir("touchscreen", NULL);
+	FTS_COMMON_DBG("1----proc_entry = proc_mkdir");
 	if (!proc_entry) {
 		ERROR_COMMON_FTS("%s:%d Error, failed to creat procfs.\n",__func__, __LINE__);
 		return -EINVAL;
 	}
+	FTS_COMMON_DBG("2----tp_capacitance_data = proc_mkdir");
 	if (!proc_create("tp_capacitance_data", 0, proc_entry, &fts_proc_test_fops)) {
 		ERROR_COMMON_FTS("%s:%d Error, failed to creat procfs.\n",__func__, __LINE__);
 		remove_proc_entry("tp_capacitance_data", proc_entry);
 		return -EINVAL;
 	}
+	
+	FTS_COMMON_DBG("3----tp_capacitance_data = proc_mkdir");
 
 	/*add the node ts_roi_enable for apk to read/write*/
 	touch_dev = platform_device_alloc("huawei_touch", -1);
@@ -1438,7 +1346,7 @@ int fts_create_sysfs(struct i2c_client * client)
 		platform_device_put(touch_dev);
 		return err;
 	}
-	//err = device_create_file(&touch_dev->dev.kobj, &dev_attr_touch_chip_info);
+
 	err = sysfs_create_group(&touch_dev->dev.kobj, &ts_roi_attr_group);
 	if (err) {
 		ERROR_COMMON_FTS("can't create ts's sysfs\n");

@@ -1,25 +1,4 @@
-/*
- * cyttsp5_i2c.c
- * Cypress TrueTouch(TM) Standard Product V5 I2C Module.
- * For use with Cypress Txx5xx parts.
- * Supported parts include:
- * TMA5XX
- *
- * Copyright (C) 2012-2014 Cypress Semiconductor
- *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * version 2, and only version 2, as published by the
- * Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * Contact Cypress Semiconductor at www.cypress.com <ttdrivers@cypress.com>
- *
- */
+
 
 #include "cyttsp5_regs.h"
 
@@ -192,13 +171,13 @@ int cyttsp5_tp_report_dsm_err(struct device *dev, int type, int err_numb)
 			/* report i2c infomation */
 			cyttsp5_dsm_record_i2c_err_info(err_numb);
 			break;
-		case DSM_TP_FWUPDATE_ERROR_NO:
+		case DSM_TP_FW_ERROR_NO:
 			/* report tp basic infomation */
 			cyttsp5_dsm_record_basic_err_info(dev);
 			/* report fw infomation */
 			cyttsp5_dsm_record_fw_err_info(err_numb);
 			break;
-		case DSM_TP_WAKEUP_ERROR_NO:
+		case DSM_TP_CYTTSP5_WAKEUP_ERROR_NO:
 			/* report tp basic infomation */
 			cyttsp5_dsm_record_basic_err_info(dev);
 			/* report error infomation */

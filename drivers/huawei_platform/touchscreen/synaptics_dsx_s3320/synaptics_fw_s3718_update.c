@@ -108,7 +108,6 @@
 #define INT_DISABLE_WAIT_MS 20
 #define ENTER_FLASH_PROG_WAIT_MS 20
 #define NO_ERR  0
-#define WAIT_FW_REFLASH_MS 25
 static char touch_s3718_info[50] = {0};
 
 static int fwu_do_reflash(void);
@@ -548,7 +547,6 @@ struct synaptics_rmi4_fwu_handle {
 	unsigned char *image_name;
 	unsigned char *firmware_name;
 	unsigned int image_size;
-	struct synaptics_rmi4_data *rmi4_data;
 	struct image_metadata img;
 	struct register_offset off;
 	struct block_count blkcount;
@@ -557,6 +555,7 @@ struct synaptics_rmi4_fwu_handle {
 	struct synaptics_rmi4_fn_desc f01_fd;
 	struct synaptics_rmi4_fn_desc f34_fd;
 	struct synaptics_rmi4_fn_desc f35_fd;
+	struct synaptics_rmi4_data *rmi4_data;
 	struct workqueue_struct *fwu_workqueue;
 	struct delayed_work fwu_work;
 	struct synaptics_rmi4_access_ptr *fn_ptr;
@@ -2040,11 +2039,11 @@ static enum flash_area fwu_go_nogo(void)
 			config_id[2],
 			config_id[3]);
 
-        snprintf(fwu->rmi4_data->tp_chip_info, sizeof(fwu->rmi4_data->tp_chip_info),
-	        "%s-%x%02x",
-	        get_cof_module_name(fwu->rmi4_data->rmi4_mod_info.product_id_string),
-	        config_id[2],
-	        config_id[3]);
+	snprintf(fwu->rmi4_data->tp_chip_info, sizeof(fwu->rmi4_data->tp_chip_info),
+	"%s-%x%02x",
+	get_cof_module_name(fwu->rmi4_data->rmi4_mod_info.product_id_string),
+	config_id[2],
+	config_id[3]);
 
 	/* Get image config ID */
 	image_config_id = be_to_uint(fwu->img.ui_config.data);
@@ -2250,7 +2249,7 @@ int synaptics_s3718_fw_upgrade(unsigned char *fw_data)
 #ifdef CONFIG_HUAWEI_DSM
 	/* if fw upgrade err, report err */
 	if(retval<0) {
-		//synp_tp_report_dsm_err(DSM_TP_FWUPDATE_ERROR_NO, retval);
+		//synp_tp_report_dsm_err(DSM_TP_FW_ERROR_NO, retval);
 	}
 #endif/*CONFIG_HUAWEI_DSM*/
 
@@ -2844,7 +2843,6 @@ static int fwu_start_reflash(void)
 		tp_log_err("fwu_do_reflash is failed");
 	}
 	tp_log_info("reset_device\n");
-	msleep(WAIT_FW_REFLASH_MS);
 	rmi4_data->reset_device(rmi4_data);
 
 	retval = fwu_read_flash_status();
@@ -2854,7 +2852,7 @@ static int fwu_start_reflash(void)
 		tp_log_err("fwu_read_flash_status read error\n");
 	else
 		tp_log_info("fwu->in_bl_mode is %s\n", fwu->in_bl_mode?"in bl mode":"normal mode");
-	
+
 	return retval;
 }
 
@@ -3384,7 +3382,7 @@ static void fwu_startup_fw_s3718_update_work(struct work_struct *work)
 		}
 		goto exit;
 	}
-	   
+
 	need_update = synaptics_check_fw_s3718_version();
 
 	if (fwu->force_update || need_update) {

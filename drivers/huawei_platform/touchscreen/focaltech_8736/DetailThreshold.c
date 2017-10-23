@@ -1227,7 +1227,6 @@ void OnInit_DThreshold_ForceTouch_SCapRawDataTest(char *strIniFile)
 	MaxValue = atoi(str);
 	
 	///Max
-//	for(i = 0; i < 2; i++)	//	frank modify 2016-02-22
 	for(i = 0; i < FORCETOUCH_ROW; i++)		
 	{
 		for(j = 0; j < g_ScreenSetParam.iUsedMaxRxNum; j++)
@@ -1235,7 +1234,6 @@ void OnInit_DThreshold_ForceTouch_SCapRawDataTest(char *strIniFile)
 			g_stCfg_MCap_DetailThreshold.ForceTouch_SCapRawDataTest_OFF_Max[i][j] = MaxValue;
 		}
 	}
-//	for(i = 0; i < 2; i++)	//	frank modify 2016-02-22
 	for(i = 0; i < FORCETOUCH_ROW; i++)		
 	{
 		snprintf(str, 128, "ForceTouch_ScapRawData_OFF_Max_%d", (i + 1));
@@ -1264,7 +1262,6 @@ void OnInit_DThreshold_ForceTouch_SCapRawDataTest(char *strIniFile)
 		}		
 	}
 	////Min
-//	for(i = 0; i < 2; i++)	//	frank modify 2016-02-22
 	for(i = 0; i < FORCETOUCH_ROW; i++)		
 	{
 		for(j = 0; j < g_ScreenSetParam.iUsedMaxRxNum; j++)
@@ -1272,7 +1269,6 @@ void OnInit_DThreshold_ForceTouch_SCapRawDataTest(char *strIniFile)
 			g_stCfg_MCap_DetailThreshold.ForceTouch_SCapRawDataTest_OFF_Min[i][j] = MinValue;
 		}
 	}
-//	for(i = 0; i < 2; i++)	//	frank modify 2016-02-22
 	for(i = 0; i < FORCETOUCH_ROW; i++)		
 	{
 		snprintf(str, 128, "ForceTouch_ScapRawData_OFF_Min_%d", (i + 1));
@@ -1311,7 +1307,6 @@ void OnInit_DThreshold_ForceTouch_SCapRawDataTest(char *strIniFile)
 	//////读取阈值，若无特殊设置，则以Basic_Threshold替代
 	
 	///Max
-//	for(i = 0; i < 2; i++)	//	frank modify 2016-02-22
 	for(i = 0; i < FORCETOUCH_ROW; i++)		
 	{
 		for(j = 0; j < g_ScreenSetParam.iUsedMaxRxNum; j++)
@@ -1319,7 +1314,6 @@ void OnInit_DThreshold_ForceTouch_SCapRawDataTest(char *strIniFile)
 			g_stCfg_MCap_DetailThreshold.ForceTouch_SCapRawDataTest_ON_Max[i][j] = MaxValue;
 		}
 	}
-//	for(i = 0; i < 2; i++)	//	frank modify 2016-02-22
 	for(i = 0; i < 1; i++)		
 
 	{
@@ -1349,7 +1343,6 @@ void OnInit_DThreshold_ForceTouch_SCapRawDataTest(char *strIniFile)
 		}		
 	}
 	////Min
-//	for(i = 0; i < 2; i++)	//	frank modify 2016-02-22
 	for(i = 0; i < FORCETOUCH_ROW; i++)		
 	{
 		for(j = 0; j < g_ScreenSetParam.iUsedMaxRxNum; j++)
@@ -1357,7 +1350,6 @@ void OnInit_DThreshold_ForceTouch_SCapRawDataTest(char *strIniFile)
 			g_stCfg_MCap_DetailThreshold.ForceTouch_SCapRawDataTest_ON_Min[i][j] = MinValue;
 		}
 	}
-//	for(i = 0; i < 2; i++)	//	frank modify 2016-02-22
 	for(i = 0; i < FORCETOUCH_ROW; i++)		
 	{
 		snprintf(str, 128, "ForceTouch_ScapRawData_ON_Min_%d", (i + 1));
@@ -1406,7 +1398,6 @@ void OnInit_DThreshold_ForceTouch_SCapCbTest(char *strIniFile)
 	//////读取阈值，若无特殊设置，则以Basic_Threshold替代
 	
 	///Max
-//	for(i = 0; i < 2; i++)	//	frank modify 2016-02-22
 	for(i = 0; i < FORCETOUCH_ROW; i++)		
 	{
 		for(j = 0; j < g_ScreenSetParam.iUsedMaxRxNum; j++)
@@ -1414,7 +1405,6 @@ void OnInit_DThreshold_ForceTouch_SCapCbTest(char *strIniFile)
 			g_stCfg_MCap_DetailThreshold.ForceTouch_SCapCbTest_ON_Max[i][j] = MaxValue;
 		}
 	}
-//	for(i = 0; i < 2; i++)	//	frank modify 2016-02-22
 	for(i = 0; i < FORCETOUCH_ROW; i++)		
 	{
 		snprintf(str, 128, "ForceTouch_ScapCB_ON_Max_%d", (i + 1));
@@ -1443,7 +1433,6 @@ void OnInit_DThreshold_ForceTouch_SCapCbTest(char *strIniFile)
 		}		
 	}
 	////Min
-//	for(i = 0; i < 2; i++)	//	frank modify 2016-02-22
 	for(i = 0; i < FORCETOUCH_ROW; i++)		
 	{
 		for(j = 0; j < g_ScreenSetParam.iUsedMaxRxNum; j++)
@@ -1451,7 +1440,6 @@ void OnInit_DThreshold_ForceTouch_SCapCbTest(char *strIniFile)
 			g_stCfg_MCap_DetailThreshold.ForceTouch_SCapCbTest_ON_Min[i][j] = MinValue;
 		}
 	}
-//	for(i = 0; i < 2; i++)	//	frank modify 2016-02-22
 	for(i = 0; i < FORCETOUCH_ROW; i++)		
 	{
 		snprintf(str, 128, "ForceTouch_ScapCB_ON_Min_%d", (i + 1));
@@ -1484,7 +1472,6 @@ void OnInit_DThreshold_ForceTouch_SCapCbTest(char *strIniFile)
 	GetPrivateProfileString("Basic_Threshold","ForceTouch_SCapCbTest_OFF_Max","240",str,strIniFile);
 	MaxValue = atoi(str);
 	///Max
-//	for(i = 0; i < 2; i++)	//	frank modify 2016-02-22
 	for(i = 0; i <FORCETOUCH_ROW; i++)		
 	{
 		for(j = 0; j < g_ScreenSetParam.iUsedMaxRxNum; j++)
@@ -1492,7 +1479,6 @@ void OnInit_DThreshold_ForceTouch_SCapCbTest(char *strIniFile)
 			g_stCfg_MCap_DetailThreshold.ForceTouch_SCapCbTest_OFF_Max[i][j] = MaxValue;
 		}
 	}
-//	for(i = 0; i < 2; i++)	//	frank modify 2016-02-22
 	for(i = 0; i < FORCETOUCH_ROW; i++)		
 	{
 		snprintf(str, 128, "ForceTouch_ScapCB_OFF_Max_%d", (i + 1));
@@ -1521,7 +1507,6 @@ void OnInit_DThreshold_ForceTouch_SCapCbTest(char *strIniFile)
 		}		
 	}
 	////Min
-//	for(i = 0; i < 2; i++)	//	frank modify 2016-02-22
 	for(i = 0; i < FORCETOUCH_ROW; i++)		
 	{
 		for(j = 0; j < g_ScreenSetParam.iUsedMaxRxNum; j++)
@@ -1529,7 +1514,6 @@ void OnInit_DThreshold_ForceTouch_SCapCbTest(char *strIniFile)
 			g_stCfg_MCap_DetailThreshold.ForceTouch_SCapCbTest_OFF_Min[i][j] = MinValue;
 		}
 	}
-//	for(i = 0; i < 2; i++)	//	frank modify 2016-02-22
 	for(i = 0; i < FORCETOUCH_ROW; i++)		
 	{
 		snprintf(str, 128, "ForceTouch_ScapCB_OFF_Min_%d", (i + 1));

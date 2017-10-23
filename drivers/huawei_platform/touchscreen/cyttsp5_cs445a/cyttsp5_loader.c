@@ -1,25 +1,4 @@
-/*
- * cyttsp5_loader.c
- * Cypress TrueTouch(TM) Standard Product V5 FW Loader Module.
- * For use with Cypress Txx5xx parts.
- * Supported parts include:
- * TMA5XX
- *
- * Copyright (C) 2012-2014 Cypress Semiconductor, Inc.
- *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * version 2, and only version 2, as published by the
- * Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * Contact Cypress Semiconductor at www.cypress.com <ttdrivers@cypress.com>
- *
- */
+
 #include "cyttsp5_regs.h"
 #include "cyttsp5_core.h"
 #include <linux/firmware.h>
@@ -241,9 +220,6 @@ static unsigned int cyttsp5_get_panel_name(char *panel_name, unsigned int length
 		break;
 	case FW_LENSONE:
 		strncpy(panel_name, "Lensone", length);
-		break;
-	case FW_TOPTOUCH:
-		strncpy(panel_name, "Toptouch", length);
 		break;
 	default:
 		snprintf(panel_name, length - 1, "%d", panel_id);
@@ -1628,7 +1604,7 @@ static void cyttsp5_fw_and_config_upgrade(
 #endif
 #ifdef CONFIG_HUAWEI_DSM
 	if(TS_UPDATE_STATE_UNDEFINE != g_tp_dsm_info.constraints_UPDATE_status){
-		cyttsp5_tp_report_dsm_err(dev, DSM_TP_FWUPDATE_ERROR_NO, retVal);
+		cyttsp5_tp_report_dsm_err(dev, DSM_TP_FW_ERROR_NO, retVal);
 	}
 #endif/*CONFIG_HUAWEI_DSM*/
 

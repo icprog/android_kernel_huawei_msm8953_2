@@ -101,7 +101,6 @@ static struct of_device_id sensor_info_match_table[] = {
 	{
 		.compatible = "huawei,hw_sensor_info",
 	},
-	{ },
 };
 
 static struct sensor_info sensor_info_instance = {

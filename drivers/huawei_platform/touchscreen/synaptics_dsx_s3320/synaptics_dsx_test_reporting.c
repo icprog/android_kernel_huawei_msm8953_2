@@ -495,7 +495,6 @@ enum f54_report_types {
 	F54_TREX_TO_GND = 25,
 	F54_TREX_SHORTS = 26,
 	F54_AMP_RAW_ADC = 83,
-	F54_TD43XX_EE_SHORT = 95,
 	INVALID_REPORT_TYPE = -1,
 };
 
@@ -537,8 +536,6 @@ static char *g_mmi_buf_rx_tx_data = NULL;
 
 #define F54_RX_TX_SIZE(x, y) \
 	((F54_MAX_TX_RX_DATA_SIZE * (x) * (y) * 2) + F54_MAX_CAP_DATA_SIZE * 3 + F54_MAX_CAP_TITLE_SIZE)
-
-#define F54_SHORTS_SIZE 60
 
 #endif/*MMITEST*/
 
@@ -1605,10 +1602,6 @@ struct synaptics_rmi4_f54_handle {
 	int f54_rx2rx_others;
 	char f54_tx2tx_limit;
 	int rx2rx_tmp_count;
-	bool synaptics3320_short_test_enable;
-	bool td43xx_short_test_enable;
-	int trx_short_array_num;
-	short *short_circuit_array;
 };
 
 struct f55_query {
@@ -2055,7 +2048,6 @@ static bool is_report_type_valid(enum f54_report_types report_type)
 	case F54_TREX_TO_GND:
 	case F54_TREX_SHORTS:
 	case F54_AMP_RAW_ADC:
-	case F54_TD43XX_EE_SHORT:
 		return true;
 		break;
 	default:
@@ -2136,9 +2128,6 @@ static void set_report_size(void)
 	case F54_TREX_TO_GND:
 	case F54_TREX_SHORTS:
 		f54->report_size = TREX_DATA_SIZE;
-		break;
-	case F54_TD43XX_EE_SHORT:
-		f54->report_size = 2 * 2 * rx * tx; /*test item need 2*2 frame data*/
 		break;
 	default:
 		f54->report_size = 0;
@@ -3597,9 +3586,9 @@ static void mmi_RxtoRxshort1_report(unsigned char* buffer)
 static void mmi_RxtoRxshort2_report(unsigned char* buffer)
 {
 
-	int count = f54->rx2rx_tmp_count;
+	int count = f54->rx2rx_tmp_count;	
 	enum mmi_results TestResult = TEST_PASS;
-
+	
 	count += RxtoRx2ShortTest(buffer);
 
 	/*For Probability of tp cap test crush*/
@@ -3610,17 +3599,17 @@ static void mmi_RxtoRxshort2_report(unsigned char* buffer)
 
 	if(count == (rx * rx)){
 	 	TestResult = TEST_PASS;
-		strncat(g_mmi_buf_f54test_result,"11P-", sizeof("11P-"));
+	 	strncat(g_mmi_buf_f54test_result,"4P-", sizeof("4P-"));
 	} else{
 		TestResult = TEST_FAILED;
 		tp_log_err("%s:test failed,count = %d LINE = %d\n",__func__,count,__LINE__);
-		strncat(g_mmi_buf_f54test_result,"11F-",sizeof("11F-"));
+	 	strncat(g_mmi_buf_f54test_result,"4F-",sizeof("4F-"));
 	}
 
 	return;
 }
 
-static int synaptics_set_report_rate(unsigned char report_rate,unsigned char aim_report_rate)
+static int synaptics_set_report_rate(unsigned char report_rate,unsigned char aim_report_rate) 
 {
 	int rc = 0;
 	unsigned char command = 0;
@@ -3628,21 +3617,21 @@ static int synaptics_set_report_rate(unsigned char report_rate,unsigned char aim
 
 	// step 1: set report rate to 120Hz
 	command = (unsigned char)report_rate;
-	rc = f54->fn_ptr->write(f54->rmi4_data,
-							f54->control_base_addr + report_rate_offset,
-							&command,
+	rc = f54->fn_ptr->write(f54->rmi4_data, 
+							f54->control_base_addr + report_rate_offset, 
+							&command, 
 							1);
 	if(rc < 0) {
-		tp_log_err("%s(%d):set report to 120Hz error, base_addr=%d, offset=%d, rc=%d\n",
+		tp_log_err("%s(%d):set report to 120Hz error, base_addr=%d, offset=%d, rc=%d\n", 
 			__func__, __LINE__, f54->control_base_addr, report_rate_offset, rc);
 		return rc;
 	}
 
 	// step 2: read report rate to check set
 	msleep(40);
-	rc = f54->fn_ptr->read(f54->rmi4_data,
-							f54->data_base_addr + F54_READ_RATE_OFFSET,
-							&report_rate_in_ic,
+	rc = f54->fn_ptr->read(f54->rmi4_data, 
+							f54->data_base_addr + F54_READ_RATE_OFFSET, 
+							&report_rate_in_ic, 
 							1);
 	if(rc < 0){
 		tp_log_err("%s(%d):read report rate from ic fail,base_addr=%d, offset=%d, rc=%d\n",
@@ -3653,7 +3642,7 @@ static int synaptics_set_report_rate(unsigned char report_rate,unsigned char aim
 	if(report_rate_in_ic == aim_report_rate) {
 		return 0;
 	} else {
-		tp_log_err("%s(%d):report rate to set:%d, report in ic:%d\n",
+		tp_log_err("%s(%d):report rate to set:%d, report in ic:%d\n", 
 			__func__, __LINE__, report_rate, report_rate_in_ic);
 		return -EINVAL;
 	}
@@ -3663,7 +3652,7 @@ static void synaptics_change_report_rate(void)
 {
 	int rc = 0;
 
-	tp_log_info("%s(%d):change report rate 120 first then to 60\n",
+	tp_log_info("%s(%d):change report rate 120 first then to 60\n",	
 		__func__, __LINE__);
 
 	// step 1: set report rate to 120HZ
@@ -3672,9 +3661,9 @@ static void synaptics_change_report_rate(void)
 		tp_log_err("%s(%d):fail to set report rate to 120HZ\n",__func__, __LINE__);
 		goto set_report_rate_fail;
 	}
-
+	
 	msleep(40);
-
+	
 	// step 2: set report rate to 60Hz
 	rc = synaptics_set_report_rate((unsigned char)F54_60LOW_RATE,(unsigned char)F54_DATA60_RATE);
 	if (rc) {
@@ -3683,12 +3672,12 @@ static void synaptics_change_report_rate(void)
 	}
 
 	tp_log_info("%s(%d):change rate success\n", __func__, __LINE__);
-	strncat(g_mmi_buf_f54test_result, "5P-", sizeof("5P-"));
+	strncat(g_mmi_buf_f54test_result, "8P-", sizeof("8P-"));
 	return;
 
 set_report_rate_fail:
 	tp_log_err("%s(%d):change rate fail\n",__func__, __LINE__);
-	strncat(g_mmi_buf_f54test_result, "5F-", sizeof("5F-"));
+	strncat(g_mmi_buf_f54test_result, "8F-", sizeof("8F-"));
 	return;
 }
 
@@ -3718,7 +3707,7 @@ static void mmi_txtotx_short_report(unsigned char* buffer)
 	    strncat(g_mmi_buf_f54test_result,"2P-",sizeof("2P-"));
 	else
 	    strncat(g_mmi_buf_f54test_result,"2F-",sizeof("2F-"));
-
+	
 	return;
 }
 
@@ -3729,7 +3718,7 @@ static void mmi_txtoground_short_report(unsigned char* buffer, size_t report_siz
 	char Txstatus;
 	int result = 0;
 	int i,j;
-
+	
 	for (i = 0;i < report_size;i++)
 	{
 		for (j = 0; j < 8; j++)
@@ -3739,17 +3728,17 @@ static void mmi_txtoground_short_report(unsigned char* buffer, size_t report_siz
 					result++;
 			}
 		}
-
+	
 		if ((tx) == result)
 		{
 			TestResult = TEST_PASS;
-			strncat(g_mmi_buf_f54test_result,"10P-",sizeof("10P-"));
+			strncat(g_mmi_buf_f54test_result,"3P-",sizeof("3P-"));
 		}
 		else
 		{
 			tp_log_err("%s: Failed in txtoground, result = %d\n",__func__,result);
 			TestResult = TEST_FAILED;
-			 strncat(g_mmi_buf_f54test_result,"10F-",sizeof("10F-"));
+			 strncat(g_mmi_buf_f54test_result,"3F-",sizeof("3F-"));	
 		}
 
 	return;
@@ -3781,7 +3770,7 @@ static void mmi_maxmincapacitance_report(unsigned char* buffer)
 	/*For Probability of tp cap test crush*/
 	snprintf(buf, sizeof(buf)," %d %d", max, min);
 	strncat(g_mmi_maxmincapacitance_report, buf, sizeof(buf));
-	strncat(g_mmi_maxmincapacitance_report, "\n", 1);
+	strncat(g_mmi_maxmincapacitance_report, "\n", 1);	
 
 	if (0 == f54->f54_raw_max_cap)
 	{
@@ -3789,20 +3778,20 @@ static void mmi_maxmincapacitance_report(unsigned char* buffer)
 		tp_log_err("%s: Failed,highRes limit = zero!\n",__func__);
 		goto maxmin_test_end;
 	}
-
+	
 	if ((max < maxcapacitance)&& (min > mincapacitance)){
 		TestResult = TEST_PASS;
 	}else{
-		TestResult = TEST_FAILED;
+		TestResult = TEST_FAILED;;		
 		tp_log_err("%s: Failed,max= %d,min= %d \n",__func__,max,min);
 		goto maxmin_test_end;
 	}
-
+		
 maxmin_test_end:
 	if(TestResult)
-		strncat(g_mmi_buf_f54test_result,"9P-",sizeof("9P-"));
+		strncat(g_mmi_buf_f54test_result,"5P-",sizeof("5P-"));
 	else
-		strncat(g_mmi_buf_f54test_result,"9F-",sizeof("9F-"));
+		strncat(g_mmi_buf_f54test_result,"5F-",sizeof("5F-"));
 
 	return;
 }
@@ -3851,12 +3840,12 @@ static void mmi_highresistance_report(unsigned char* buffer)
 			goto highRes_test_end;
 		}
 	}
-
+	
 highRes_test_end:
 	if(TestResult) {
-		strncat(g_mmi_buf_f54test_result,"8P-", sizeof("8P-"));
+		strncat(g_mmi_buf_f54test_result,"6P-", sizeof("6P-"));
 	} else {
-		strncat(g_mmi_buf_f54test_result,"8F-", sizeof("8F-"));
+		strncat(g_mmi_buf_f54test_result,"6F-", sizeof("6F-"));
 	}
 
 	return;
@@ -3933,272 +3922,12 @@ static void mmi_deltacapacitance_test(unsigned char *buffer)
 
 	if (g_mmi_buf_f54test_result) {
 		if(1 == result) {
-			strncat(g_mmi_buf_f54test_result, "3P-", sizeof("3P-"));
+			strncat(g_mmi_buf_f54test_result, "7P-", sizeof("7P-"));
 		} else {
-			tp_log_err("%s:deltadata test is out of range, test result is 3F\n",__func__);
-			strncat(g_mmi_buf_f54test_result, "3F-", sizeof("3F-"));
+			tp_log_err("%s:deltadata test is out of range, test result is 7F\n",__func__);
+			strncat(g_mmi_buf_f54test_result, "7F-", sizeof("7F-"));
 		}
 	}
-	return;
-}
-static void mmi_synaptics3320_shorts_report(unsigned char *buffer)
-{
-	int i;
-	enum mmi_results TestResult = TEST_PASS;
-
-	for (i = 0; i < f54->trx_short_array_num; i++) {
-		if (buffer[i] != f54->short_circuit_array[i]) {
-			TestResult = TEST_FAILED;
-			tp_log_err("%s: Failed data: shortciruit[%d] = 0x%02x #%d\n",
-				__func__, i, buffer[i], __LINE__);
-		}
-	}
-
-	if (TestResult) {
-		strncat(g_mmi_buf_f54test_result, "4P-", sizeof("4P-"));
-		tp_log_info("mmi_trx_shorts_report test is successed\n");
-	}
-	else {
-		strncat(g_mmi_buf_f54test_result, "4F-", sizeof("4F-"));
-		tp_log_info("mmi_trx_shorts_report test is failed\n");
-	}
-
-	return;
-}
-
-static short FindMedian(short* pdata, int num)
-{
-	int i,j;
-	short temp;
-	short *value;
-	short median;
-
-	value = (short *)kzalloc( num * sizeof(short), GFP_KERNEL);
-	if (!value) {
-		tp_log_err("%s(%d), failed to malloc\n", __func__, __LINE__);
-		return -1;
-	}
-	for(i = 0; i < num; i++) {
-		*(value+i) = *(pdata+i);
-	}
-
-	/*sorting*/
-	for (i = 1; i <= num-1; i++) {
-		for (j = 1; j <= num-i; j++) {
-			if (*(value+j-1) <= *(value+j)) {
-			   temp = *(value+j-1);
-			   *(value+j-1) = *(value+j);
-			   *(value+j) = temp;
-			}
-			else {
-				continue;
-			}
-		}
-	}
-	/*calculation of median*/
-	if (0 == num % 2) {
-		median = (*(value + (num/2 - 1)) + *(value + (num/2)))/2;
-	}
-	else {
-		median = *(value+(num/2));
-	}
-
-	if(value) {
-		kfree(value);
-	}
-
-	return median;
-}
-
-static int td43xx_ee_short_normalize_data(signed short * image)
-{
-	int retval = 0;
-	int i, j;
-	int tx_num = tx;
-	int rx_num = rx;
-	unsigned char left_size = 0x09;
-	unsigned char right_size = 0x09;
-	signed short *report_data_16 = NULL;
-	signed short *left_median = NULL;
-	signed short *right_median = NULL;
-	signed short *left_column_buf = NULL;
-	signed short *right_column_buf = NULL;
-	signed int temp = 0;
-
-	right_median = (unsigned short *) kzalloc(rx_num * sizeof(short), GFP_KERNEL);
-	if (!right_median) {
-		retval = -ENOMEM;
-		tp_log_err("%s(%d), failed to malloc right_median\n", __func__, __LINE__);
-		goto exit;
-	}
-
-	left_median = (unsigned short *) kzalloc(rx_num * sizeof(short), GFP_KERNEL);
-	if (!left_median) {
-		retval = -ENOMEM;
-		tp_log_err("%s(%d), failed to malloc left_median\n", __func__, __LINE__);
-		goto exit;
-	}
-
-	right_column_buf = (unsigned short *) kzalloc(right_size * rx_num * sizeof(short), GFP_KERNEL);
-	if (!right_column_buf ) {
-		retval = -ENOMEM;
-		tp_log_err("%s(%d), failed to malloc right_column_buf\n", __func__, __LINE__);
-		goto exit;
-	}
-
-	left_column_buf = (unsigned short *) kzalloc(left_size * rx_num * sizeof(short), GFP_KERNEL);
-	if (!left_column_buf ) {
-		retval = -ENOMEM;
-		tp_log_err("%s(%d), failed to malloc left_column_buf\n", __func__, __LINE__);
-		goto exit;
-	}
-
-	report_data_16 = image;
-	for (i = 0; i < rx_num; i++) {
-		for (j = 0; j < right_size; j++) {
-			right_column_buf[i * right_size + j] =
-					report_data_16[j * rx_num + i];
-		}
-	}
-
-	report_data_16 = image + right_size * rx_num;
-	for (i = 0; i < rx_num; i++) {
-		for (j = 0; j < left_size; j++) {
-			left_column_buf[i * left_size + j] =
-					report_data_16[j * rx_num + i];
-		}
-	}
-
-	for (i = 0; i < rx_num; i++) {
-		right_median[i] = FindMedian(right_column_buf + i * right_size, right_size);
-		left_median[i] = FindMedian(left_column_buf + i * left_size, left_size);
-		if (-1 == right_median[i] || -1 == left_median[i]) {
-			tp_log_err("failed to get midian[%d] value\n", i);
-			goto exit;
-		}
-		tp_log_debug("right_median[%d] = %d\n", i, right_median[i]);
-		tp_log_debug("left_median[%d] = %d\n", i, left_median[i]);
-	}
-
-	for (i = 0; i < tx_num; i++) {
-		for (j = 0; j < rx_num; j++) {
-			if (i < right_size) {
-				temp = (unsigned int) image[i * rx_num + j];
-				temp = temp * 100 / right_median[j];
-			}
-			else {
-				temp = (unsigned int) image[i * rx_num + j];
-				temp = temp * 100 / left_median[j];
-			}
-			if (temp < 90) {
-				image[i * rx_num + j] = 1;
-			}
-			else {
-				image[i * rx_num + j] = 0;
-			}
-		}
-	}
-
-exit:
-	if (right_median)
-		kfree(right_median);
-	if (left_median)
-		kfree(left_median);
-	if (right_column_buf)
-		kfree(right_column_buf);
-	if (left_column_buf)
-		kfree(left_column_buf);
-	return retval;
-}
-
-static void td43xx_ee_short_report(unsigned char*buffer)
-{
-	int i, j;
-	int k = 0;
-	int tx_num = tx;
-	int rx_num = rx;
-	signed short *td43xx_rt95_part_one = NULL;
-	signed short *td43xx_rt95_part_two = NULL;
-	char *td43xx_ee_short_data = NULL;
-	unsigned int td43xx_rt95_report_size = tx_num * rx_num * 2;
-	enum mmi_results TestResult = TEST_PASS;
-	int retval = 0;
-
-	tp_log_info("%s: report_type=%d,tx=%d,rx=%d #%d\n",
-		__func__, f54->report_type, tx_num, rx_num, __LINE__);
-
-	td43xx_ee_short_data = kzalloc(tx_num * rx_num, GFP_KERNEL);
-	if (!td43xx_ee_short_data) {
-		tp_log_err("%s(%d), failed to malloc td43xx_ee_short_data\n", __func__, __LINE__);
-		goto exit;
-	}
-	memset(td43xx_ee_short_data, 0, tx_num * rx_num);
-
-	td43xx_rt95_part_one = kzalloc(td43xx_rt95_report_size, GFP_KERNEL);
-	if (!td43xx_rt95_part_one) {
-		tp_log_err("%s(%d), failed to malloc td43xx_rt95_part_one\n", __func__, __LINE__);
-		goto exit;
-	}
-
-	td43xx_rt95_part_two = kzalloc(td43xx_rt95_report_size, GFP_KERNEL);
-	if (!td43xx_rt95_part_two) {
-		tp_log_err("%s(%d), failed to malloc td43xx_rt95_part_two\n", __func__, __LINE__);
-		goto exit;
-	}
-
-	for (i = 0, k = 0; i < tx_num * rx_num; i++) {
-		td43xx_rt95_part_one[i] = buffer[k] |
-								(buffer[k + 1]) << 8;
-		td43xx_rt95_part_one[i] = (td43xx_rt95_part_one[i] > 100) ? 1 :0;
-		k += 2;
-	}
-
-	for (i = 0, k = td43xx_rt95_report_size; i < tx_num * rx_num; i++) {
-		td43xx_rt95_part_two[i] = buffer[k] |
-								(buffer[k + 1]) << 8;
-		k += 2;
-	}
-
-	retval = td43xx_ee_short_normalize_data(td43xx_rt95_part_two);
-	if (retval < 0) {
-		tp_log_err("%s(%d), td43xx_ee_short_normalize_data failed\n", __func__, __LINE__);
-		goto exit;
-	}
-
-	for (i = 0; i < tx_num; i++) {
-		for (j = 0; j < rx_num; j++) {
-			td43xx_ee_short_data[i*rx_num +j] =
-			(unsigned char)(td43xx_rt95_part_one[i * rx_num + j]) ||
-				td43xx_rt95_part_two[i * rx_num + j];
-		}
-	}
-
-	for (i = 0; i < tx_num; i++) {
-		for (j = 0; j < rx_num; j++) {
-			if (0 != td43xx_ee_short_data[i * tx_num + j]) {
-				TestResult = TEST_FAILED;
-				tp_log_err("td43xx_ee_short_data:[%d, %d]%d\n",
-					i, j, td43xx_ee_short_data[i * tx_num + j]);
-			}
-		}
-	}
-
-exit:
-	if (td43xx_rt95_part_one)
-		kfree(td43xx_rt95_part_one);
-	if (td43xx_rt95_part_two)
-		kfree(td43xx_rt95_part_two);
-	if (td43xx_ee_short_data)
-		kfree(td43xx_ee_short_data);
-	if (TestResult) {
-		strncat(g_mmi_buf_f54test_result, "4P-", sizeof("4P-"));
-		tp_log_info("tdxx_ee_short test is successed\n");
-	}
-	else {
-		strncat(g_mmi_buf_f54test_result, "4F-", sizeof("4F-"));
-		tp_log_info("tdxx_ee_short test is failed\n");
-	}
-
 	return;
 }
 
@@ -4210,17 +3939,17 @@ static int mmi_runtest(int report_type)
 	unsigned char patience = MAX_IRQ_WAIT_PATIENCE;//50;
 	int report_size;
 	unsigned char *buffer = NULL;
-
+	
 	retval = synaptics_rmi4_f54_report_type_set(report_type);
 	if (retval) {
-		tp_log_err("%s(%d):report type set fail,rc=%d\n",
+		tp_log_err("%s(%d):report type set fail,rc=%d\n", 
 			__func__, __LINE__, retval);
 		goto test_exit;
 	}
 
 	retval = synaptics_rmi4_f54_get_report_set(1);
 	if (retval) {
-		tp_log_err("%s(%d):get report set fail,rc=%d\n",
+		tp_log_err("%s(%d):get report set fail,rc=%d\n", 
 			__func__, __LINE__, retval);
 		goto test_exit;
 	}
@@ -4232,7 +3961,7 @@ static int mmi_runtest(int report_type)
 			break;
 	} while (--patience > 0);
 
-	tp_log_info("%s(%d):reportType=%d, patience=%d, status=%d\n",
+	tp_log_info("%s(%d):reportType=%d, patience=%d, status=%d\n", 
 		__func__, __LINE__, report_type, patience, f54->status);
 
 	/*set the error number to retval*/
@@ -4244,7 +3973,7 @@ static int mmi_runtest(int report_type)
 		tp_log_err("%s(%d):report_size is 0\n", __func__, __LINE__);
 		goto test_exit;
 	}
-
+	
 	buffer = kzalloc(report_size, GFP_KERNEL);
 	if (!buffer){
 		tp_log_err("%s(%d): Faild to kzalloc %d buffer\n",
@@ -4293,12 +4022,6 @@ static int mmi_runtest(int report_type)
 		break;
 	case F54_16BIT_IMAGE:
 		mmi_deltacapacitance_test(buffer);
-		break;
-	case F54_TREX_SHORTS:
-		mmi_synaptics3320_shorts_report(buffer);
-		break;
-	case F54_TD43XX_EE_SHORT:
-		td43xx_ee_short_report(buffer);
 		break;
 	default:
 		break;
@@ -4511,6 +4234,19 @@ static int synaptics_rmi4_f54_mmi_test_s3320(void)
 		goto exit;
 	}
 
+	retval = synaptics_rmi4_f54_do_preparation_set_mmi(F54_16BIT_IMAGE);
+	if (retval) {
+		tp_log_err("%s#%d do_preparation_set failed, retval=%d\n", __func__, __LINE__, retval);
+		goto exit;
+	}
+
+	retval = mmi_runtest(F54_16BIT_IMAGE);
+	if (retval) {
+		tp_log_err("%s#%d mmi_runtest F54_16BIT_IMAGE fail, retval=%d\n",
+			__func__, __LINE__, retval);
+		goto exit;
+	}
+
 	retval = synaptics_rmi4_f54_do_preparation_set_mmi(F54_RAW_16BIT_IMAGE);
 	if (retval) {
 		tp_log_err("%s#%d do_preparation_set failed, retval=%d\n", __func__, __LINE__, retval);
@@ -4525,79 +4261,33 @@ static int synaptics_rmi4_f54_mmi_test_s3320(void)
 	}
 
 	strncat(g_mmi_buf_f54test_result, "0P-",sizeof("0P-"));
-
-	retval = synaptics_rmi4_f54_do_preparation_set_mmi(F54_16BIT_IMAGE);
+	if(SYNAPTICS_S4322 != f54->rmi4_data->board->ic_type)
+	{
+	retval = synaptics_rmi4_f54_do_preparation_set_mmi(F54_HIGH_RESISTANCE);
 	if (retval) {
 		tp_log_err("%s#%d do_preparation_set failed, retval=%d\n", __func__, __LINE__, retval);
 		goto exit;
 	}
 
-	retval = mmi_runtest(F54_16BIT_IMAGE);
+
+	tp_log_info("%s %d:mmi_runtest begin \n", __func__, __LINE__);
+	retval = mmi_runtest(F54_HIGH_RESISTANCE);
 	if (retval) {
-		tp_log_err("%s#%d mmi_runtest F54_16BIT_IMAGE fail, retval=%d\n",
+		tp_log_err("%s#%d mmi_runtest F54_HIGH_RESISTANCE fail, retval=%d\n",
 			__func__, __LINE__, retval);
 		goto exit;
 	}
 
-	if(SYNAPTICS_S4322 != f54->rmi4_data->board->ic_type)
-	{
-		retval = synaptics_rmi4_f54_do_preparation_set_mmi(F54_HIGH_RESISTANCE);
-		if (retval) {
-			tp_log_err("%s#%d do_preparation_set failed, retval=%d\n", __func__, __LINE__, retval);
-			goto exit;
-		}
-
-		tp_log_info("%s %d:mmi_runtest begin \n", __func__, __LINE__);
-		retval = mmi_runtest(F54_HIGH_RESISTANCE);
-		if (retval) {
-			tp_log_err("%s#%d mmi_runtest F54_HIGH_RESISTANCE fail, retval=%d\n",
-				__func__, __LINE__, retval);
-			goto exit;
-		}
-
-		// report rate test switch
-		tp_log_info("%s(%d):report rate test switch is:%d\n",
-			__func__, __LINE__, f54->report_rate_test);
-		if (f54->report_rate_test) {
-			synaptics_change_report_rate();
-		}
-		if (f54->synaptics3320_short_test_enable) {
-			tp_log_info("trx_short_test %d:mmi_runtest begin \n", __LINE__);
-			retval = synaptics_rmi4_f54_do_preparation_set_mmi(F54_TREX_SHORTS);
-			if (retval) {
-				tp_log_err("%s#%d do_preparation_set failed, retval=%d\n", __func__, __LINE__, retval);
-				goto exit;
-			}
-
-			retval = mmi_runtest(F54_TREX_SHORTS);
-			if (retval) {
-				tp_log_err("%s#%d mmi_runtest F54_TREX_SHORTS fail, retval=%d\n",
-					__func__, __LINE__, retval);
-				goto exit;
-			}
-		}
+	// report rate test switch
+	tp_log_info("%s(%d):report rate test switch is:%d\n", 
+		__func__, __LINE__, f54->report_rate_test);
+	if (f54->report_rate_test) {
+		synaptics_change_report_rate();
 	}
-	else {
-		if (f54->td43xx_short_test_enable) {
-			tp_log_info("tdxx_ee_shorts_test %d:mmi_runtest begin \n", __LINE__);
-			retval = synaptics_rmi4_f54_do_preparation_set_mmi(F54_TD43XX_EE_SHORT);
-			if (retval) {
-				tp_log_err("%s#%d do_preparation_set failed, retval=%d\n", __func__, __LINE__, retval);
-				goto exit;
-			}
-
-			retval = mmi_runtest(F54_TD43XX_EE_SHORT);
-			if (retval) {
-				tp_log_err("%s#%d mmi_runtest F54_TD43XX_EE_SHORT fail, retval=%d\n",
-					__func__, __LINE__, retval);
-				goto exit;
-			}
-		}
-	}
-
+  }
 	sysfs_is_busy = true;
 	f54->rmi4_data->reset_device(rmi4_data);
-
+	
 	if (rmi4_data->board->esd_support) {
 		synaptics_dsx_esd_resume();
 	}
@@ -7087,8 +6777,6 @@ static void synaptics_rmi4_f54_release_cap_limit(void)
 		kfree(f54->f54_tx_to_tx_limit);
 	if (f54->f54_rx_to_rx_limit)
 		kfree(f54->f54_rx_to_rx_limit);
-	if (f54->short_circuit_array)
-		kfree(f54->short_circuit_array);
 
 	f54->f54_full_raw_max_cap = NULL;
 	f54->f54_full_raw_min_cap = NULL;
@@ -7107,10 +6795,6 @@ static void synaptics_rmi4_f54_release_cap_limit(void)
 	f54->f54_rx2rx_diagonal_min = 0;
 	f54->f54_rx2rx_others = 0;
 	f54->f54_tx2tx_limit = 0;
-	f54->short_circuit_array = NULL;
-	f54->synaptics3320_short_test_enable = 0;
-	f54->td43xx_short_test_enable = 0;
-	f54->trx_short_array_num = 0;
 	tp_log_debug("%s:release the momery,LINE = %d\n", __func__, __LINE__);
 
 	return;
@@ -7351,22 +7035,6 @@ void get_f54_get_cap_limit(struct device *dev, char *product_id_ptr, u16 ic_type
 	/*To get the txtxreport_limit from the dtsi*/
 	f54->f54_tx2tx_limit = get_of_u32_val(dev_node, "huawei,txtxreport_limit", 0);
 	tp_log_debug("%s: txtxreport_limit= %d\n",__func__,f54->f54_tx2tx_limit);
-
-	/*To get the open/short test enable from dtsi*/
-	f54->synaptics3320_short_test_enable = (bool)get_of_u32_val(dev_node, "huawei,support_3320short_test", false);
-	tp_log_debug("%s: read dtsi value, support_3320short_test:%d\n", __func__, f54->synaptics3320_short_test_enable);
-
-	f54->td43xx_short_test_enable = (bool)get_of_u32_val(dev_node, "huawei,support_td43xxshort_test", false);
-	tp_log_debug("%s: read dtsi value, support_td43xxshort_test:%d\n", __func__, f54->td43xx_short_test_enable);
-
-	f54->trx_short_array_num = get_of_u32_val(dev_node, "huawei,trx_short_array_num", 0);
-	tp_log_debug("%s: read dtsi value, trx_short_array_num:%d\n", __func__, f54->trx_short_array_num);
-
-	f54->short_circuit_array = create_and_get_u16_array(dev_node,"huawei,short_circuit_array", &size);
-	if (!f54->short_circuit_array || size != f54->trx_short_array_num) {
-		f54->synaptics3320_short_test_enable = false;
-		tp_log_err("unable to read huawei,short_circuit_array size=%d\n", size);
-	}
 
 	return;
 error:
@@ -7863,7 +7531,7 @@ static void synaptics_rmi4_f54_remove(struct synaptics_rmi4_data *rmi4_data)
 #endif
 	kfree(f54);
 	f54 = NULL;
-
+	
 /*move free action to module_exit,because the cap test
  is complexity,I change this to other place,but panic always
  happened,so move to module exit for safety*/

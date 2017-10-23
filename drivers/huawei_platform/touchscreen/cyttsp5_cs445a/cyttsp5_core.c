@@ -1,25 +1,4 @@
-/*
- * cyttsp5_core.c
- * Cypress TrueTouch(TM) Standard Product V5 Core Module.
- * For use with Cypress Txx5xx parts.
- * Supported parts include:
- * TMA5XX
- *
- * Copyright (C) 2012-2014 Cypress Semiconductor
- *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * version 2, and only version 2, as published by the
- * Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * Contact Cypress Semiconductor at www.cypress.com <ttdrivers@cypress.com>
- *
- */
+
 
 #include "cyttsp5_regs.h"
 #include "cyttsp5_core.h"
@@ -120,8 +99,6 @@ struct cyttsp5_hid_output {
 };
 int gesture_id = 0;
 u32 cyttsp_gesture_count[GESTURE_MAX] = {0};
-
-extern atomic_t mmi_test_status;
 
 static int cyttsp5_power_off(struct device* dev, struct cyttsp5_core_data *pcore_data);
 static int cyttsp5_power_on(struct device* dev, struct cyttsp5_core_data *pcore_data);
@@ -230,7 +207,7 @@ static int _cyttsp5_request_tthe_print(struct device *dev, u8 *buf,
  * This function is passed to platform detect
  * function to perform a read operation
  */
-int cyttsp5_platform_detect_read(struct device *dev, void *buf, int size)
+static int cyttsp5_platform_detect_read(struct device *dev, void *buf, int size)
 {
 	struct cyttsp5_core_data *cd = dev_get_drvdata(dev);
 
@@ -1100,8 +1077,6 @@ static void cyttsp5_si_get_sensing_conf_data(struct cyttsp5_core_data *cd)
 
 	scd->electrodes_x = scd_dev->electrodes_x;
 	scd->electrodes_y = scd_dev->electrodes_y;
-	scd->tx_num = scd->electrodes_x;
-	scd->rx_num = scd->electrodes_y;
 	scd->origin_x = scd_dev->origin_x;
 	scd->origin_y = scd_dev->origin_y;
 	scd->panel_id = scd_dev->panel_id;
@@ -2037,12 +2012,8 @@ static int cyttsp5_hid_output_get_selftest_result_(
 		.write_buf = write_buf,
 	};
 
-	/*
-	 * Do not repeat reading for Auto Shorts test
-	 * when PIP version < 1.3
-	 */
-	repeat = IS_PIP_VER_GE(&cd->sysinfo, 1, 3)
-			|| test_id != CY_ST_ID_AUTOSHORTS;
+	/* Repeat reading for Opens test */
+	repeat = test_id == CY_ST_ID_OPENS;
 
 again:
 	write_buf[0] = LOW_BYTE(read_offset);
@@ -2054,9 +2025,6 @@ again:
 	rc = cyttsp5_hid_send_output_and_wait_(cd, &hid_output);
 	if (rc)
 		return rc;
-
-	if (cd->response_buf[5] != CY_CMD_STATUS_SUCCESS)
-		goto set_status;
 
 	read_test_id = cd->response_buf[6];
 	if (read_test_id != test_id)
@@ -2075,12 +2043,10 @@ again:
 			goto again;
 		}
 	}
-
-	if (actual_read_len)
-		*actual_read_len = total_read_len;
-set_status:
 	if (status)
 		*status = cd->response_buf[5];
+	if (actual_read_len)
+		*actual_read_len = total_read_len;
 
 	return rc;
 }
@@ -2938,7 +2904,7 @@ static int cyttsp5_hw_soft_reset(struct cyttsp5_core_data *cd)
 	return 0;
 }
 
-int cyttsp5_hw_hard_reset(struct cyttsp5_core_data *cd)
+static int cyttsp5_hw_hard_reset(struct cyttsp5_core_data *cd)
 {
 	if (cd->cpdata->xres) {
 		cd->cpdata->xres(cd->cpdata, cd->dev);
@@ -4295,7 +4261,7 @@ static int cyttsp5_core_wake_device_from_deep_sleep_(
 			break;
 		}
 #ifdef CONFIG_HUAWEI_DSM
-		cyttsp5_tp_report_dsm_err(cd->dev, DSM_TP_WAKEUP_ERROR_NO, 0);
+		cyttsp5_tp_report_dsm_err(cd->dev, DSM_TP_CYTTSP5_WAKEUP_ERROR_NO, 0);
 #endif/*CONFIG_HUAWEI_DSM*/
 		tp_log_err("%s %d: Fail to set power status, retry = %d\n",
 			__func__, __LINE__, retry_times);
@@ -5960,6 +5926,7 @@ static ssize_t hw_cyttsp5_tp_capacitance_test_type_show(struct kobject *dev,
 	return cyttsp5_tp_capacitance_test_type_show(cdev, NULL, buf);
 }
 
+
 static ssize_t hw_cyttsp5_easy_wakeup_supported_gestures_show(struct kobject *dev,
 		struct kobj_attribute *attr, char *buf)
 {
@@ -6042,6 +6009,15 @@ static int add_easy_wakeup_interfaces(struct device *dev)
 			return -ENODEV;
 		}
 
+		/*add the node tp_capacitance_test_type apk to write*/
+		error = sysfs_create_file(properties_kobj, &tp_capacitance_test_type.attr);
+		if (error)
+		{
+			kobject_put(properties_kobj);
+			tp_log_err("%s: cyttsp5_tp_capacitance_test_type create file error\n", __func__);
+			return -ENODEV;
+		}
+
 		/*add the node easy_wakeup_position for apk to write*/
 		error = sysfs_create_file(properties_kobj, &easy_wakeup_position.attr);
 		if (error)
@@ -6102,31 +6078,6 @@ static int add_holster_interface(struct device *dev)
 			tp_log_err("%s: holster_func create file error\n", __func__);
 			return -ENODEV;
 		}
-	}
-
-	return 0;
-}
-
-/*add the node tp_capacitance_test_type apk to write*/
-static int add_sys_tp_capacitance_test(struct device *dev)
-{
-	int error = 0;
-	struct kobject *properties_kobj;
-	struct cyttsp5_core_data *cd = dev_get_drvdata(dev);
-
-	properties_kobj = tp_get_touch_screen_obj();
-	if( NULL == properties_kobj )
-	{
-		tp_log_err("%s: Error, get kobj failed!\n", __func__);
-		return -1;
-	}
-
-	error = sysfs_create_file(properties_kobj, &tp_capacitance_test_type.attr);
-	if (error)
-	{
-		kobject_put(properties_kobj);
-		tp_log_err("%s: cyttsp5_tp_capacitance_test_type create file error\n", __func__);
-		return -ENODEV;
 	}
 
 	return 0;
@@ -6205,11 +6156,6 @@ static int fb_notifier_callback(struct notifier_block *self,
 		container_of(self, struct cyttsp5_core_data, fb_notifier);
 	struct fb_event *evdata = data;
 	int *blank;
-
-	if(atomic_read(&mmi_test_status)){
-		tp_log_err("%s MMI test is running, TP no need syspend / resume.\n",__func__);
-		return 0;
-	}
 	if (event == FB_EVENT_BLANK && evdata) {
 		blank = evdata->data;
 		if ((*blank == FB_BLANK_UNBLANK) 
@@ -6390,7 +6336,7 @@ static int cyttsp5_power_init(struct device* dev, struct cyttsp5_core_data *pcor
 			return -EINVAL;
 		}
 
-		rc = regulator_set_voltage(cpower->vdd_reg, cpower->vdd_value,cpower->vdd_value);
+		rc = regulator_set_voltage(cpower->vdd_reg, 2850000,2850000);
 		if (rc < 0) {
 			tp_log_err( "%s %d: vdd regulator set fail, rc=%d\n", __func__,__LINE__,rc);
 			regulator_put(cpower->vdd_reg);
@@ -6605,70 +6551,7 @@ static int cyttsp5_power_off(struct device* dev, struct cyttsp5_core_data *pcore
 	return 0;
 }
 #endif /*CONFIG_HUAWEI_KERNEL*/
-static int cyttsp5_pinctrl_get_init(struct cyttsp5_core_data *cd)
-{
-	int ret = -1;
 
-	cd->pctrl = devm_pinctrl_get(cd->dev);
-	if (IS_ERR(cd->pctrl)) {
-		tp_log_err("failed to devm pinctrl get\n");
-		ret = -EINVAL;
-		return ret;
-	}
-
-	cd->pins_default = pinctrl_lookup_state(cd->pctrl, "cyttsp5_active");
-	if (IS_ERR(cd->pins_default)) {
-		tp_log_err("failed to pinctrl lookup state default\n");
-		ret = -EINVAL;
-		goto err_pinctrl_put;
-	}
-
-	cd->pins_idle = pinctrl_lookup_state(cd->pctrl, "cyttsp5_sleep");
-	if (IS_ERR(cd->pins_idle)) {
-		tp_log_err("failed to pinctrl lookup state idle\n");
-		ret = -EINVAL;
-		goto err_pinctrl_put;
-	}
-
-	return 0;
-
-err_pinctrl_put:
-	devm_pinctrl_put(cd->pctrl);
-	return ret;
-}
-
-static int cyttsp5_pinctrl_select_normal(struct cyttsp5_core_data *cd)
-{
-	int retval = -1;
-
-	if (cd->pctrl == NULL || cd->pins_default == NULL) {
-		tp_log_err("%s: pctrl or pins_default is NULL.\n", __func__);
-		return retval;
-	}
-
-	retval = pinctrl_select_state(cd->pctrl, cd->pins_default);
-	if (retval < 0) {
-		tp_log_err("%s: set pinctrl normal error.\n", __func__);
-	}
-
-	return retval;
-}
-static int cyttsp5_pinctrl_select_lowpower(struct cyttsp5_core_data *cd)
-{
-	int retval = -1;
-
-	if (cd->pctrl == NULL || cd->pins_idle== NULL) {
-		tp_log_err("%s: pctrl or pins_default is NULL.\n", __func__);
-		return retval;
-	}
-
-	retval = pinctrl_select_state(cd->pctrl, cd->pins_idle);
-	if (retval < 0) {
-		tp_log_err("%s: set pinctrl normal error.\n", __func__);
-	}
-
-	return retval;
-}
 int cyttsp5_probe(const struct cyttsp5_bus_ops *ops, struct device *dev,
 		u16 irq, size_t xfer_buf_size)
 {
@@ -6716,18 +6599,6 @@ int cyttsp5_probe(const struct cyttsp5_bus_ops *ops, struct device *dev,
 
 	cd->glove_mode_enabled = 0;//set default glove mode as disable
 	cd->holster_mode_enabled = 0;//set default holster mode as disable
-
-	if (pdata->core_pdata->pinctrl_set == 1) {
-		rc = cyttsp5_pinctrl_get_init(cd);
-		if (rc < 0) {
-			tp_log_err("%s: pinctrl get error rc=%d\n", __func__, rc);
-		} else {
-			rc = cyttsp5_pinctrl_select_normal(cd);
-			if (rc < 0)
-				tp_log_err("%s: pinctrl select normal error rc=%d\n", __func__, rc);
-		}
-	}
-
 #ifdef CONFIG_HUAWEI_KERNEL
 	/* power on */
 	tp_log_info("%s %d:cyttsp5_core_probe power on.\n", __func__, __LINE__);
@@ -6931,7 +6802,7 @@ int cyttsp5_probe(const struct cyttsp5_bus_ops *ops, struct device *dev,
 	if (cd->mmi_test_support) {
 		cyttsp5_procfs_create();
 	}
-	add_sys_tp_capacitance_test(dev);
+
 	gdev = dev;
 
 	touch_hw_data.set_touch_probe_flag(TOUCH_DETECTED);
@@ -6965,11 +6836,6 @@ error_detect:
 error_power_on:
 	cyttsp5_power_release(dev,cd);
 error_power_init:
-	if (pdata->core_pdata->pinctrl_set == 1) {
-		rc = cyttsp5_pinctrl_select_lowpower(cd);
-		if (rc < 0)
-			tp_log_err("%s: pinctrl select lowpower error rc=%d\n", __func__, rc);
-	}
 	kfree(cd);
 error_alloc_data:
 error_no_pdata:

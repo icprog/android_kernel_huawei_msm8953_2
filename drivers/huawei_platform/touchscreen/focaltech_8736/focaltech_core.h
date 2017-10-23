@@ -1,37 +1,8 @@
-/*
- *
- * FocalTech fts TouchScreen driver.
- * 
- * Copyright (c) 2010-2015, Focaltech Ltd. All rights reserved.
- *
- * This software is licensed under the terms of the GNU General Public
- * License version 2, as published by the Free Software Foundation, and
- * may be copied, distributed, and modified under those terms.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- */
+
 
 #ifndef __LINUX_FTS_H__
 #define __LINUX_FTS_H__
- /*******************************************************************************
-*
-* File Name: focaltech.h
-*
-* Author: mshl
-*
-* Created: 2014-09
-*
-* Modify by mshl on 2015-10-26
-*
-* Abstract:
-*
-* Reference:
-*
-*******************************************************************************/
+ 
 
 /*******************************************************************************
 * Included header files
@@ -98,7 +69,7 @@
 
 #define FTS_REG_CHIP_ID		0xA3
 
-#define FTS_REG_CHIP_ID2 	0x9F    //chip ID2	// lifengshi add. 20160617
+#define FTS_REG_CHIP_ID2 	0x9F
 
 #define FTS_REG_FW_VENDOR_ID	0xA8
 
@@ -124,14 +95,13 @@
 				max_tch, FTS_DRIVER_INFO, group_id, \
 				fw_vkey_support, fw_name, fw_maj, fw_min, \
 				fw_sub_min)
-
+				
 
 
 #ifdef FTS_DBG_EN
 //#define FTS_DBG(fmt, args...) 				printk("[FTS]  "fmt, ## args)
 #define FTS_DBG(fmt, arg...)	do {printk("[FTS] %s. line: %d.  "fmt"\n", __FUNCTION__, __LINE__, ##arg);} while (0)
-//#define FTS_PRINT(fmt, arg...)	do {printk(""fmt, ##arg);} while (0)
-#define FTS_PRINT(fmt, arg...)       do {} while (0)
+#define FTS_PRINT(fmt, arg...)	do {printk(""fmt, ##arg);} while (0)
 #else
 #define FTS_DBG(fmt, args...) 				do{}while(0)
 #define FTS_PRINT(fmt, arg...)	do {} while (0)
@@ -261,7 +231,6 @@ extern struct fts_Upgrade_Info fts_updateinfo_curr;
 extern struct i2c_client *fts_i2c_client;
 extern struct fts_ts_data *fts_wq_data;
 extern struct input_dev *fts_input_dev;
-extern int ft8607_cap_test_fake_status;
 
 static DEFINE_MUTEX(i2c_rw_access);
 

@@ -64,7 +64,6 @@
 #define TXC_PA2240_I2C_RETRY_COUNT		3 	/* Number of times to retry i2c */
 /*wait more time to try read or write to avoid potencial risk*/
 #define TXC_PA2240_I2C_RETRY_TIMEOUT	6	/* Timeout between retry (miliseconds) */
-#define TXC_PA2240_I2C_RESUME_TIMEOUT	500	/* Timeout i2c contrlor resume to ready (miliseconds) */
 
 #define TXC_PA2240_I2C_BYTE 0
 #define TXC_PA2240_I2C_WORD 1
@@ -130,7 +129,6 @@ struct txc_pa2240_data {
 	struct mutex single_lock;
 	struct work_struct	dwork;		/* for PS interrupt */
 	struct delayed_work    powerkey_work;
-	wait_queue_head_t	notify_i2c_ready_event;
 	struct input_dev *input_dev_ps;
 
 	/* regulator data */
@@ -169,7 +167,6 @@ struct txc_pa2240_data {
 	unsigned int pdata_min; /*the value of Stay away from the phone's infrared hole*/
 	bool saturation_flag;
 	bool oil_occur;
-	bool i2c_ready_flag;
 
 	bool device_exist;
 };
@@ -548,8 +545,8 @@ static int txc_pa2240_dsm_init(struct txc_pa2240_data *data)
 		TXC_PA2240_ERR("%s@%d register dsm txc_pa2240_ps_dclient failed!\n",__func__,__LINE__);
 		return -ENOMEM;
 	}
-	/*for dmd */
-	//txc_pa2240_ps_dclient->driver_data = data;
+
+	txc_pa2240_ps_dclient->driver_data = data;
 
 	data->ls_test_exception.reg_buf = kzalloc(512, GFP_KERNEL);
 	if(!data->ls_test_exception.reg_buf){
@@ -1061,17 +1058,6 @@ static void txc_pa2240_work_handler(struct work_struct *work)
 	int reg_cfg2;
 	int ret;
 	int pdata;
-	int status;
-
-	status = wait_event_timeout(data->notify_i2c_ready_event,
-		(data->i2c_ready_flag == true),
-		msecs_to_jiffies(TXC_PA2240_I2C_RESUME_TIMEOUT));
-	if (status == 0) {
-		data->i2c_ready_flag = true;
-		TXC_PA2240_ERR("%s: Failed to wait for I2C bus ready\n", __func__);
-	}
-
-	wake_lock_timeout(&data->ps_report_wk, PS_WAKEUP_TIME);
 	mutex_lock(&data->single_lock);
 	ret = txc_pa2240_get_ps(client);
 	if (ret != 0x82) {
@@ -1997,28 +1983,11 @@ reg_vdd_put:
 /*In suspend and resume function,we only control the als,leave pls alone*/
 static int txc_pa2240_suspend(struct i2c_client *client, pm_message_t mesg)
 {
-	struct txc_pa2240_data *data = i2c_get_clientdata(client);
-	if (NULL == data) {
-		TXC_PA2240_ERR("%s: i2c_get_clientdata is null\n", __func__);
-		return -1;
-	}
-
-	data->i2c_ready_flag = false;
-	TXC_PA2240_INFO("%s: data->i2c_ready_flag: %d\n", __func__, data->i2c_ready_flag);
 	return 0;
 }
 
 static int txc_pa2240_resume(struct i2c_client *client)
 {
-	struct txc_pa2240_data *data = i2c_get_clientdata(client);
-	if (NULL == data) {
-		TXC_PA2240_ERR("%s: i2c_get_clientdata is null\n", __func__);
-		return -1;
-	}
-
-	data->i2c_ready_flag = true;
-	wake_up(&data->notify_i2c_ready_event);
-	TXC_PA2240_INFO("%s: data->i2c_ready_flag: %d\n", __func__, data->i2c_ready_flag);
 	return 0;
 }
 /*pamameter subfunction of probe to reduce the complexity of probe function*/
@@ -2440,11 +2409,9 @@ static int txc_pa2240_probe(struct i2c_client *client,
 		goto exit_unregister_dsm;
 	}
 
-	data->i2c_ready_flag = true;
 	mutex_init(&data->update_lock);
 	mutex_init(&data->single_lock);
 	INIT_WORK(&data->dwork, txc_pa2240_work_handler);
-	init_waitqueue_head(&data->notify_i2c_ready_event);
 
 	INIT_DELAYED_WORK(&data->powerkey_work, txc_pa2240_powerkey_screen_handler);
 

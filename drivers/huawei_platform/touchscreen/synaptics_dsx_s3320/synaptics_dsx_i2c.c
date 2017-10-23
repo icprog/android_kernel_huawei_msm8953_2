@@ -162,7 +162,6 @@ static u32 gesture_count[GESTURE_MAX] = {0};
 #endif
 /* Used for lcd to control power state */
 bool incell_gesture_enabled = false;
-int  s3320_cap_test_fake_status =0;
 #define TP_GPIO_BASE_8916 		902
 /* TP i2c bus gpio for 8916 */
 #define TP_I2C_GPIO_DATA_8916		18
@@ -747,7 +746,7 @@ int synp_tp_report_dsm_err( int type, int err_numb )
 			/* report i2c infomation */
 			synaptics_dsm_record_i2c_err_info(err_numb);
 			break;
-		case DSM_TP_FWUPDATE_ERROR_NO:
+		case DSM_TP_FW_ERROR_NO:
 			/* report tp basic infomation */
 			synaptics_dsm_record_basic_err_info();
 			/* report fw infomation */
@@ -813,8 +812,7 @@ long get_ic_type_by_string(const char * product_id_ptr)
 	if(0 == strncasecmp(product_id_ptr, PID_LG_VENUS, PID_LG_LEN)) {
 		ic_type = SYNAPTICS_S3718;
 		goto exit;
-	}else if(0 == strncasecmp(product_id_ptr, PID_BOE_MALN, PID_BOE_MALN_LEN) ||
-				0 == strncasecmp(product_id_ptr, PID_LG_CANN, PID_LG_CANN_LEN)) {
+	}else if(0 == strncasecmp(product_id_ptr, PID_BOE_MALN, PID_BOE_MALN_LEN)){
 		ic_type = SYNAPTICS_S4322;
 		goto exit;
 	}else if(0 == strncasecmp(product_id_ptr, PID_JDI_S3320, PID_JDI_LEN)){
@@ -861,8 +859,7 @@ long get_module_id_by_string(const char * product_id_ptr)
 	      (0 == strncasecmp(product_id_ptr, PID_BOE_MALN, PID_BOE_MALN_LEN))||
 	      (0 == strncasecmp(product_id_ptr, PID_BOE_CANN, PID_BOE_CANN_LEN))){
 		module_id = FW_BOE_4322;
-	} else if(0 == strncasecmp(product_id_ptr, PID_LG_VENUS, PID_LG_LEN) ||
-				0 == strncasecmp(product_id_ptr, PID_LG_CANN, PID_LG_CANN_LEN)) {
+	} else if(0 == strncasecmp(product_id_ptr, PID_LG_VENUS, PID_LG_LEN)) {
 		module_id = FW_LG;
 
 	/* huawei common module id get will use #kstrtol to parse #product_id_ptr */
@@ -1675,7 +1672,6 @@ static int synaptics_set_glove_mode(struct synaptics_rmi4_data *rmi4_data, int v
 	int ret = 0;
 
 	tp_log_info("%s(%d):set glove value to:%d\n", __func__, __LINE__, value);
-
 	if (SYNAPTICS_S3320 == ic_type || SYNAPTICS_S3718 == ic_type) {
 		/* Set f12 glove mode:1-open,0-close */
 		ret = F12_set_glove_mode(rmi4_data, value);
@@ -1705,10 +1701,10 @@ static ssize_t synaptics_glove_func_store(struct device *dev,
 		tp_log_err("%s: kstrtoul error,ret=%d\n", __func__,ret);
 		return ret;
 	}
-        rmi4_data->glove_enabled = !!value;
+	rmi4_data->glove_enabled = !!value;
 	if (rmi4_data->firmware_updating){
 		tp_log_err("%s: tp fw is updating,return\n", __func__);
-		return size;
+		return 0;
 	}
 
 	tp_log_debug("%s:line%d , rt_counter=%d\n", __func__, __LINE__,
@@ -2562,7 +2558,6 @@ static ssize_t synaptics_holster_func_store(struct device *dev,
 	int y0 = 0;
 	int x1 = 0;
 	int y1 = 0;
-
 	ret = sscanf(buf, "%d %d %d %d %d",&enable, &x0, &y0, &x1, &y1);
 	if (!ret) {
 		tp_log_err("sscanf return invaild :%d\n", ret);
@@ -2577,7 +2572,7 @@ static ssize_t synaptics_holster_func_store(struct device *dev,
 		goto out;
 	}
 
-        if (rmi4_data->firmware_updating){
+	if (rmi4_data->firmware_updating){
 		tp_log_err("%s: tp fw is updating,return\n", __func__);
 		rmi4_data->holster_info.holster_enabled = enable;
 		return -EINVAL;
@@ -2762,7 +2757,7 @@ static ssize_t ts_roi_enable_store(struct device *dev,
 	tp_log_debug("sscanf value is %u\n", value);
 
 	if (rmi4_data->roi_info.roi_enabled == value) {
-		tp_log_info("%s, there is no need to send same cmd twice. roi_switch valie is %u",
+		tp_log_info("%s, there is no need to send same cmd twice. roi_switch value is %u",
 		     __func__, value);
 		error = value;
 		goto out;
@@ -2895,7 +2890,7 @@ ssize_t touch_chip_info_show(struct device *dev, struct device_attribute *attr, 
 	struct device *cdev = core_dev_ptr;
 	struct synaptics_rmi4_data *rmi4_data = dev_get_drvdata(cdev);
 	struct synaptics_rmi4_device_info *rmi = &(rmi4_data->rmi4_mod_info);
-        long module_id = UNKNOW_PRODUCT_MODULE;
+	long module_id = UNKNOW_PRODUCT_MODULE;
 	char *product_id = rmi->product_id_string;
 
 	if(0 == strlen(rmi4_data->tp_chip_info)) {
@@ -2911,7 +2906,7 @@ ssize_t touch_chip_info_show(struct device *dev, struct device_attribute *attr, 
 					__func__, rmi4_data->tp_chip_info);
 	}
 	tp_log_info("%s: product_id_string=%s,tp_chip_info=%s\n",
-                __func__, rmi->product_id_string, rmi4_data->tp_chip_info);
+				__func__, rmi->product_id_string, rmi4_data->tp_chip_info);
 
 	return snprintf(buf, PAGE_SIZE - 1, "synaptics-%s-%s", rmi->product_id_string, rmi4_data->tp_chip_info);
 }
@@ -3262,10 +3257,6 @@ exit:
 
 #ifdef CONFIG_HUAWEI_DSM
 	if(retval<0) {
-		if ((SYNAPTICS_S4322 == rmi4_data->board->ic_type) && (rmi4_data->fb_callback_suspend_state)) {
-			tp_log_info("tp is suspend, i2c read is not report dsm\n");
-			return retval;
-		}
 		synp_tp_report_dsm_err(DSM_TP_I2C_RW_ERROR_NO, retval);
 	}
 #endif/*CONFIG_HUAWEI_DSM*/
@@ -3327,7 +3318,7 @@ static int synaptics_rmi4_i2c_write(struct synaptics_rmi4_data *rmi4_data,
 	}
 
 	if (retry == SYN_I2C_RETRY_TIMES) {
-		tp_log_err("%s(%d):I2C write over retry limit, addr=0x%04x, ret=%d\n",
+		tp_log_err("%s(%d):I2C write over retry limit, addr=0x%04x, ret=%d\n", 
 			__func__, __LINE__, retval, msg->addr);
 		retval = -EIO;
 	}
@@ -3338,10 +3329,6 @@ exit:
 /* if i2c write err, report err */
 #ifdef CONFIG_HUAWEI_DSM
 	if(retval<0) {
-		if ((SYNAPTICS_S4322 == rmi4_data->board->ic_type) && (rmi4_data->fb_callback_suspend_state)) {
-			tp_log_info("tp is suspend, i2c write is not report dsm\n");
-			return retval;
-		}
 		synp_tp_report_dsm_err( DSM_TP_I2C_RW_ERROR_NO, retval);
 	}
 #endif/*CONFIG_HUAWEI_DSM*/
@@ -6288,21 +6275,20 @@ static int synaptics_rmi4_reinit_device(struct synaptics_rmi4_data *rmi4_data)
 	mutex_lock(&(rmi4_data->rmi4_reset_mutex));
 
 	synaptics_rmi4_free_fingers(rmi4_data);
-
+	
 	/* Clear interrupts first */
-	rmi4_data->num_of_intr_regs = (rmi4_data->num_of_intr_regs < MAX_INTR_REGISTERS) ? rmi4_data->num_of_intr_regs : MAX_INTR_REGISTERS;
 	retval = synaptics_rmi4_i2c_read(rmi4_data,
 			rmi4_data->f01_data_base_addr + 1,
 			intr_status,
 			rmi4_data->num_of_intr_regs);
 	if (retval < 0){
-		tp_log_err("%s(%d):Clear interrupts fail, ret=%d", __func__,
+		tp_log_err("%s(%d):Clear interrupts fail, ret=%d", __func__, 
 			__LINE__, retval);
 		goto exit;
 	}
 
 	/**
-	 *if product dts supported grip algorithm and state of the grip algorithm
+	 *if product dts supported grip algorithm and state of the grip algorithm 
 	 *is false ,we begin to set the grip algorithm edge distance
 	 */
 	if((true == rmi4_data->board->grip_algorithm_supported)
@@ -6395,12 +6381,6 @@ static int exit_esd_mode(struct synaptics_rmi4_data *rmi4_data)
 	unsigned char command = EXIT_ESD_MODE_COMMAND;
 	unsigned char cmd_addr_offset = DEFAULT_CMD_ADDR_OFFSET;
 	struct synaptics_dsx_platform_data *pdata = rmi4_data->board;
-
-	if (0 == strncasecmp(rmi4_data->rmi4_mod_info.product_id_string, PID_LG_CANN, PID_LG_CANN_LEN)) {
-		tp_log_info("%s:%d %s do not exit esd mode\n", __func__, __LINE__, rmi4_data->rmi4_mod_info.product_id_string);
-		return retval;
-	}
-
 	tp_log_info("%s:%d pdata->tddi_esd_flag=%d\n",__func__, __LINE__,pdata->tddi_esd_flag);
 	if (pdata->tddi_esd_flag) {
 		if (SYNAPTICS_S4322==pdata->ic_type) {
@@ -6516,7 +6496,9 @@ static int synaptics_rmi4_reset_device(struct synaptics_rmi4_data *rmi4_data)
 
 	enable_irq(rmi4_data->irq);
 	mutex_unlock(&(rmi4_data->rmi4_reset_mutex));
-        synaptics_wake_recovery(rmi4_data);
+
+	synaptics_wake_recovery(rmi4_data);
+
 	retval = exit_esd_mode(rmi4_data);
 	if (retval < 0) {
 		tp_log_err("%s(%d):exit esd mode fail\n", __func__, __LINE__);
@@ -8534,11 +8516,11 @@ static void synaptics_wake_recovery(struct synaptics_rmi4_data *rmi4_data)
 					__func__,retval);
 			}	
 		} else {
-		/* Write holster window zone to F11_2D_CTRL92(01)/00~(01)/05*/
-		retval = set_effective_window(rmi4_data,&synap_holster_info);
-		if (retval < 0) {
-			tp_log_err("%s:holster_zwindow_zone write error!ret = %d\n",
-					__func__,retval);
+			/* Write holster window zone to F11_2D_CTRL92(01)/00~(01)/05*/
+			retval = set_effective_window(rmi4_data,&synap_holster_info);
+			if (retval < 0) {
+				tp_log_err("%s:holster_zwindow_zone write error!ret = %d\n",
+						__func__,retval);
 		}
 
 		/*Enable holster mode*/

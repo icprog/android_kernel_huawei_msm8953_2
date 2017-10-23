@@ -69,7 +69,7 @@ static int Request_IRQ(void);
 static int ilitek_request_init_reset(void);
 static int ilitek_init(void);
 static void ilitek_exit(void);
-extern unsigned char g_Fts_Tp_To_Lcd_Rst_Flag;
+
 static const struct i2c_device_id ilitek_i2c_id[] ={
 	{ILITEK_I2C_DRIVER_NAME, 0}, {}
 };
@@ -325,21 +325,6 @@ static int ilitek_i2c_process_and_report(void)
 		ret = 0;
 	}
 	len = buf[0];
-	if (buf[0] == 0xAA && buf[1] == 0xAA && buf[2] == 0xAA && buf[3] == 0xAA) {
-		tp_log_info("ilitek ESD error RESET & RELEASE msleep without delay\n");
-#ifdef TOUCH_PROTOCOL_B
-		input_report_key(i2c.input_dev, BTN_TOUCH,0);
-		for(i = 0; i < i2c.max_tp; i++) {
-			if(i2c.touchinfo[i].flag == 1) {
-				input_mt_slot(i2c.input_dev, i);
-				input_mt_report_slot_state(i2c.input_dev, MT_TOOL_FINGER, false);
-			}
-			i2c.touchinfo[i].flag = 0;
-		}
-#endif
-		g_Fts_Tp_To_Lcd_Rst_Flag = 0xaa;
-		return 0;
-	}
 	tp_log_debug("ilitek len = 0x%x buf[0] = 0x%x, buf[1] = 0x%x, buf[2] = 0x%x\n", len, buf[0], buf[1], buf[2]);
 	if (len > 20) {
 		tp_log_info("ilitek len > 20  return & release\n");
@@ -413,7 +398,7 @@ static int ilitek_i2c_process_and_report(void)
 	}
 #endif
 	for(i = 0; i < i2c.max_tp; i++){
-		tp_status = buf[i*5+3] >> 7;
+		tp_status = buf[i*5+3] >> 7;	
 		x = (((int)(buf[i*5+3] & 0x3F) << 8) + buf[i*5+4]);
 		y = (((int)(buf[i*5+5] & 0x3F) << 8) + buf[i*5+6]);
 #ifdef REPORT_PRESSURE
@@ -916,7 +901,6 @@ static int ilitek_power_on(void)
 	struct i2c_client *client = i2c.client;
 	struct device *dev = &(client->dev);
 	
-	/*get the power name*/
 	rc = of_property_read_string(dev->of_node,"ilitek,vdd", &power_pin_vdd);
 	if (rc) {
 		tp_log_warning("%s(%d): OF error vdd rc=%d\n", __func__, __LINE__, rc);
@@ -926,8 +910,7 @@ static int ilitek_power_on(void)
 	if (rc) {
 		tp_log_warning("%s(%d): OF error vbus rc=%d\n", __func__, __LINE__, rc);
 	}
-	
-	/* VDD power on */
+
 	if(power_pin_vdd)
 	{
 		vdd_synaptics = regulator_get(dev, power_pin_vdd);
@@ -951,7 +934,6 @@ static int ilitek_power_on(void)
 		}
 	}
 	
-	/* Modify JDI tp/lcd power on/off to reduce power consumption */
 	if(power_pin_vbus)
 	{
 		vbus_synaptics = regulator_get(dev, power_pin_vbus);

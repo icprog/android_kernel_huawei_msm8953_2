@@ -28,6 +28,4 @@ unsigned char FT8716_TestItem_OpenTest(bool* bTestResult);
 unsigned char FT8716_TestItem_ShortCircuitTest(bool* bTestResult);
 
 unsigned char Fts_TestItem_CBUniformityTest(bool * bTestResult);
-unsigned char Fts_8716_Tx2Tx_Test(bool * bTestResult);
-unsigned char Fts_8716_Rx2Rx_Test(bool * bTestResult);
 #endif

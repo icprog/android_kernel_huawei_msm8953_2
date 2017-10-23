@@ -850,7 +850,7 @@ static enum flash_area fwu_go_nogo(struct image_header_data *header)
 	flash_area = NONE;
 
 exit:
-        snprintf(fwu->rmi4_data->tp_chip_info, sizeof(fwu->rmi4_data->tp_chip_info),
+	snprintf(fwu->rmi4_data->tp_chip_info, sizeof(fwu->rmi4_data->tp_chip_info),
 		"%s-%x%02x",
 		get_cof_module_name(fwu->product_id),
 		config_id[2],
@@ -1755,7 +1755,7 @@ int synaptics_fw_upgrade(unsigned char *fw_data)
 #ifdef CONFIG_HUAWEI_DSM
 	/* if fw upgrade err, report err */
 	if(retval<0) {
-		synp_tp_report_dsm_err(DSM_TP_FWUPDATE_ERROR_NO, retval);
+		synp_tp_report_dsm_err(DSM_TP_FW_ERROR_NO, retval);
 	}
 #endif/*CONFIG_HUAWEI_DSM*/
 

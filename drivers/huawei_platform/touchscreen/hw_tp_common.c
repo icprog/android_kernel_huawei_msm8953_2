@@ -1,12 +1,5 @@
 /*Add for huawei TP*/
-/*
- * Copyright (c) 2014 Huawei Device Company
- *
- * This file provide common requeirment for different touch IC.
- * 
- * 2014-01-04:Add "tp_get_touch_screen_obj" by sunlibin
- *
- */
+
 #include <linux/module.h>
 #include <huawei_platform/touchscreen/hw_tp_common.h>
 #include <linux/atomic.h>

@@ -504,6 +504,4 @@ void synaptics_rmi4_fwu_s3718_attn(struct synaptics_rmi4_data *rmi4_data,unsigne
 const char * get_ic_name(unsigned int ic_type);
 int synaptics_rmi4_chip_irq_enable(void);
 
-
-extern int  s3320_cap_test_fake_status;
 #endif

@@ -17,15 +17,13 @@
 #include "Global.h"
 //#include "test_lib.h"
 
-#define FTS_COMMON_DBG(fmt, arg...) do {printk("[FTS] %s. line: %d.  "fmt"\n", __FUNCTION__, __LINE__, ##arg);} while (0)
-
 struct stCfg_FT8716_TestItem g_stCfg_FT8716_TestItem;
 struct stCfg_FT8716_BasicThreshold g_stCfg_FT8716_BasicThreshold;
 
 void OnInit_FT8716_TestItem(char *strIniFile)
 {
 	char str[512];
-	int ret = 0;
+
 	//printk("Enter  OnInit_FT8606_TestItem \n");
 
 
@@ -88,19 +86,6 @@ void OnInit_FT8716_TestItem(char *strIniFile)
 	/////////////////////////////////// DIFFER2_UNIFORMITY_TEST
 	GetPrivateProfileString("TestItem","DIFFER2_UNIFORMITY_TEST","0",str,strIniFile);
 	g_stCfg_FT8716_TestItem.DIFFER2_UNIFORMITY_TEST = atoi(str);
-
-	ret = GetPrivateProfileString("TestItem","TX2TX_TEST","0",str,strIniFile);
-	if (ret == 0) {
-		FTS_COMMON_DBG("failed to get TX2TX_TEST, use default value 0");
-	}
-	g_stCfg_FT8716_TestItem.TX2TX_DELTA_TEST = atoi(str);
-
-	ret = GetPrivateProfileString("TestItem","RX2RX_TEST","0",str,strIniFile);
-	if (ret == 0) {
-		FTS_COMMON_DBG("failed to get RX2RX_TEST, use default value 0");
-	}
-	g_stCfg_FT8716_TestItem.RX2RX_DELTA_TEST = atoi(str);
-
 }
 
 void OnInit_FT8716_BasicThreshold(char *strIniFile)
@@ -396,25 +381,7 @@ void SetTestItem_FT8716()
 		g_stTestItem[0][g_TestItemNum].TestNum = g_TestItemNum;
 		g_stTestItem[0][g_TestItemNum].ItemType = RESULT_NULL;
 		g_stTestItem[0][g_TestItemNum].TestResult  = RESULT_NG;
-		g_TestItemNum++;
-	}
-	//////////////////////////////////////////////////TX2TX_DELTA_TEST
-	if( g_stCfg_FT8716_TestItem.TX2TX_DELTA_TEST == 1)
-	{
-		g_stTestItem[0][g_TestItemNum].ItemCode = Code_FT8716_TX2TX_DELTA_TEST;
-		g_stTestItem[0][g_TestItemNum].TestNum = g_TestItemNum;
-		g_stTestItem[0][g_TestItemNum].ItemType = RESULT_NULL;
-		g_stTestItem[0][g_TestItemNum].TestResult  = RESULT_NG;
-		g_TestItemNum++;
-	}
-	//////////////////////////////////////////////////RX2RX_DELTA_TEST
-	if( g_stCfg_FT8716_TestItem.RX2RX_DELTA_TEST == 1)
-	{
-		g_stTestItem[0][g_TestItemNum].ItemCode = Code_FT8716_RX2RX_DELTA_TEST;
-		g_stTestItem[0][g_TestItemNum].TestNum = g_TestItemNum;
-		g_stTestItem[0][g_TestItemNum].ItemType = RESULT_NULL;
-		g_stTestItem[0][g_TestItemNum].TestResult  = RESULT_NG;
-		g_TestItemNum++;
+		g_TestItemNum++;		
 	}
 }
 

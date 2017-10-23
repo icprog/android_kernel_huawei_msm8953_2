@@ -1050,7 +1050,7 @@ out:
 
 static ssize_t ts_roi_enable_show(struct device *dev, struct device_attribute *attr, char *buf)
 {
-	return snprintf(buf, sizeof(i2c.ilitek_roi_enabled), "%d\n", i2c.ilitek_roi_enabled);
+	return sprintf(buf, "%d\n", i2c.ilitek_roi_enabled);
 }
 
 
@@ -1082,6 +1082,11 @@ static ssize_t ts_roi_data_debug_show(struct device *dev, struct device_attribut
 	mutex_lock(&(i2c.roi_mutex));
 	roi_data_p = i2c.ilitek_roi_data;
 	mutex_unlock(&(i2c.roi_mutex));
+	if (NULL == roi_data_p) {
+		tp_log_err("not define ROI for roi_data_show \n");
+		return -ENOMEM;
+	}
+
 
 	for (i = 0; i < ROI_DATA_LENGTH; i += 2, j++) {
 		roi_data_16[j] = roi_data_p[i] | (roi_data_p[i + 1] << 8);
@@ -1128,7 +1133,7 @@ static ssize_t hw_glove_func_show(struct kobject *dev,
 {
 
 	tp_log_info("%s:", __func__);
-	return snprintf(buf, sizeof(i2c.glove_status), "%d\n", i2c.glove_status);
+	return sprintf(buf, "%d\n", i2c.glove_status);
 }
 
 static ssize_t hw_glove_func_store(struct kobject *dev,
@@ -1138,7 +1143,7 @@ static ssize_t hw_glove_func_store(struct kobject *dev,
 	tp_log_info("%s:", __func__);
 	if (i2c.firmware_updating) {
 		tp_log_err("%s: tp fw is updating,return\n", __func__);
-		return size;
+		return 0;
 	}
 	ret = kstrtoint(buf, 10, &i2c.glove_status);
 	if (ret) {

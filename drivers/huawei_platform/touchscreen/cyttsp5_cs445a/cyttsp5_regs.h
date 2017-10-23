@@ -1,25 +1,4 @@
-/*
- * cyttsp5_regs.h
- * Cypress TrueTouch(TM) Standard Product V5 Registers.
- * For use with Cypress Txx5xx parts.
- * Supported parts include:
- * TMA5XX
- *
- * Copyright (C) 2012-2014 Cypress Semiconductor
- *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * version 2, and only version 2, as published by the
- * Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * Contact Cypress Semiconductor at www.cypress.com <ttdrivers@cypress.com>
- *
- */
+
 
 #ifndef _CYTTSP5_REGS_H
 #define _CYTTSP5_REGS_H
@@ -434,23 +413,15 @@ enum cyttsp5_self_test_result {
 	CY_ST_RESULT_FAIL,
 	CY_ST_RESULT_HOST_MUST_INTERPRET = 0xFF,
 };
-#define CM_PANEL_DATA_OFFSET    (6)
-#define CM_BTN_DATA_OFFSET      (6)
-#define CP_PANEL_DATA_OFFSET    (6)
-#define CP_BTN_DATA_OFFSET      (6)
-#define MAX_BUF_LEN             (10000)
-#define PIP_CMD_MAX_LENGTH ((1 << 16) - 1)
+
 enum cyttsp5_self_test_id {
 	CY_ST_ID_NULL,
 	CY_ST_ID_BIST,
 	CY_ST_ID_SHORTS,
 	CY_ST_ID_OPENS,
 	CY_ST_ID_AUTOSHORTS,
-	CY_ST_ID_CM_PANEL,
-	CY_ST_ID_CP_PANEL,
-	CY_ST_ID_CM_BUTTON,
-	CY_ST_ID_CP_BUTTON,
 };
+
 #define CY_NUM_MFGID                8
 
 /* System Information interface definitions */
@@ -516,8 +487,6 @@ struct cyttsp5_sensing_conf_data {
 	u8 btn;
 	u8 scan_mode;
 	u8 max_tch;
-	u8 rx_num;
-	u8 tx_num;
 };
 
 enum cyttsp5_tch_abs {	/* for ordering within the extracted touch data array */
@@ -1003,9 +972,6 @@ struct cyttsp5_core_data {
 	u8 pr_buf[CY_MAX_PRBUF_SIZE];
 #endif
 	struct cyttsp5_gesture_position gest_pos[POINT_NUM];
-	struct pinctrl *pctrl;
-	struct pinctrl_state *pins_default;
-	struct pinctrl_state *pins_idle;
 };
 
 #ifdef TTHE_TUNER_SUPPORT
@@ -1070,8 +1036,6 @@ struct cyttsp5_bus_ops {
 	int (*write_read_specific)(struct device *dev, u8 write_len,
 			u8 *write_buf, u8 *read_buf);
 };
-ssize_t cyttsp5_run_and_get_selftest_result_noprint(struct device *dev,
-        u8 test_id, u16 read_length, bool get_result_on_pass);
 
 static inline int cyttsp5_adap_read_default(struct cyttsp5_core_data *cd,
 		void *buf, int size)
