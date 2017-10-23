@@ -400,10 +400,66 @@ fail_get_ldo:
 	return err_result;
 }
 
+int get_pmi_sub_voltage(void)
+{
+	int rc = 0;
+	struct qpnp_vadc_result results;
+	struct regulator *ldo16;
+	int err = 0;
+	int err_result = -1;
+
+	memset(&results, 0, sizeof(struct qpnp_vadc_result));
+
+	ldo16 = regulator_get(NULL, QPNP_VADC_LDO16_CONSUMER_SUPPLY);
+	if (IS_ERR(ldo16)) {
+		err = PTR_ERR(ldo16);
+		pr_err("Error %d getting ldo16 regulator\n", err);
+		goto fail_get_ldo;
+	}
+
+	err = regulator_set_voltage(ldo16, QPNP_VADC_LDO16_MIN_MICROVOLT, QPNP_VADC_LDO16_MAX_MICROVOLT);
+	if (err) {
+		pr_err("ldo16 regulator set voltage failed, err=%d\n", err);
+		goto fail_put_ldo;
+	}
+
+	err = regulator_enable(ldo16);
+	if (err) {
+		pr_err("ldo16 enable failed, err=%d\n", err);
+		goto fail_put_ldo;
+	}
+
+	if (NULL == qpnp_pmi_vadc) {
+		pr_err("Error qpnp_pmi_vadc is NULL\n");
+		goto fail_put_ldo;
+	}
+
+	rc = qpnp_vadc_read(qpnp_pmi_vadc,P_MUX1_1_1, &results);
+	if (rc) {
+		pr_err("Unable to read sub board temp rc=%d\n", rc);
+	} else {
+		pr_info("get_pmi_sub_voltage %d %lld\n", results.adc_code, results.physical);
+	}
+
+	err = regulator_disable(ldo16);
+	if (err) {
+		pr_err("ldo16 disable failed, err=%d\n", err);
+		goto fail_put_ldo;
+	}
+	regulator_put(ldo16);
+	return results.physical/1000;
+
+fail_put_ldo:
+	regulator_put(ldo16);
+fail_get_ldo:
+	return err_result;
+}
+EXPORT_SYMBOL(get_pmi_sub_voltage);
+
 static int get_sub_board_voltage(char *buf, struct kernel_param *kp)
 {
 	int voltage = 0;
-	voltage = get_antenna_sub_board_voltage();
+	voltage = get_pmi_sub_voltage();
 	return snprintf(buf, BUF_MAX_LENGTH, "%d", voltage);
 }
 
