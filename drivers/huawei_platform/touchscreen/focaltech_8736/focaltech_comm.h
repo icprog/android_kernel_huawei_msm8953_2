@@ -1,4 +1,19 @@
-
+/*
+ *
+ * FocalTech ftxxxx TouchScreen driver.
+ * 
+ * Copyright (c) 2010-2015, Focaltech Ltd. All rights reserved.
+ *
+ * This software is licensed under the terms of the GNU General Public
+ * License version 2, as published by the Free Software Foundation, and
+ * may be copied, distributed, and modified under those terms.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ */
 
 #ifndef __FOCALTECH_COMM_H__
 #define __FOCALTECH_COMM_H__
@@ -66,7 +81,7 @@
 struct fts_Upgrade_Info 
 {
 	 u8 CHIP_ID;
-	 u8 CHIP_ID2;
+	 u8 CHIP_ID2;	//	lifengshi add. 20160617
 	 u8 TPD_MAX_POINTS;
 	 u8 AUTO_CLB;
 	 u16 delay_aa;						/*delay of write FT_UPGRADE_AA */

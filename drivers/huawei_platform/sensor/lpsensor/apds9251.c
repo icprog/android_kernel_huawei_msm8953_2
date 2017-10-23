@@ -379,8 +379,8 @@ static int apds9251_dsm_init(struct rgb_apds9251_data *data)
 		APDS9251_ERR("%s@%d register dsm apds9521_als_dclient failed!\n",__func__,__LINE__);
 		return -ENOMEM;
 	}
-
-	apds9251_als_dclient->driver_data = data;
+	/*for dmd*/
+	//apds9251_als_dclient->driver_data = data;
 
 	data->als_test_exception.reg_buf = kzalloc(512, GFP_KERNEL);
 	if(!data->als_test_exception.reg_buf){

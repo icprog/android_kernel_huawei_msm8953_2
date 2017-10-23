@@ -1,4 +1,25 @@
-
+/*
+ * cyttsp5_core.h
+ * Cypress TrueTouch(TM) Standard Product V5 Core Module.
+ * For use with Cypress Txx5xx parts.
+ * Supported parts include:
+ * TMA5XX
+ *
+ * Copyright (C) 2012-2014 Cypress Semiconductor
+ *
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License
+ * version 2, and only version 2, as published by the
+ * Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * Contact Cypress Semiconductor at www.cypress.com <ttdrivers@cypress.com>
+ *
+ */
 
 #ifndef _LINUX_CYTTSP5_CORE_H
 #define _LINUX_CYTTSP5_CORE_H
@@ -72,6 +93,7 @@ struct cyttsp5_power_config {
 	struct regulator* vbus_reg;
 	char const* vdd_name;
 	char const* vbus_name;
+	unsigned int vdd_value;
 };
 
 struct touch_settings {
@@ -183,6 +205,9 @@ struct cyttsp5_core_platform_data {
 	int fw_update_logic;
 	int input_register_early;
 	unsigned int mmi_test_support;
+	unsigned int ttda_cap_test_enable;
+	const char *module_name;
+	unsigned int pinctrl_set;
 };
 
 struct touch_framework {

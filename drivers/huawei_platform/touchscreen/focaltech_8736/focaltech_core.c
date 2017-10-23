@@ -1,6 +1,38 @@
+/*
+ *
+ * FocalTech fts TouchScreen driver.
+ * 
+ * Copyright (c) 2010-2015, Focaltech Ltd. All rights reserved.
+ *
+ * This software is licensed under the terms of the GNU General Public
+ * License version 2, as published by the Free Software Foundation, and
+ * may be copied, distributed, and modified under those terms.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * VERSION      	DATE			AUTHOR
+ *    1.0		       2014-09			mshl
+ *
+ */
 
-
- 
+ /*******************************************************************************
+*
+* File Name: focaltech.c
+*
+* Author: mshl
+*
+* Created: 2014-09
+*
+* Modify by mshl on 2015-10-26
+*
+* Abstract:
+*
+* Reference:
+*
+*******************************************************************************/
 /*******************************************************************************
 * Included header files
 *******************************************************************************/
@@ -55,6 +87,8 @@
 
 #define FTS_REG_POINT_RATE	0x88
 #define FTS_REG_THGROUP		0x80
+#define FTS_REG_ROI_ENABLE 0x9b
+#define FTS_WRITE_ROIENABLE_RETRY_TIMES 10
 
 /* power register bits*/
 #define FTS_PMODE_ACTIVE		0x00
@@ -113,13 +147,11 @@ struct fts_ts_data *fts_wq_data;
 struct input_dev *fts_input_dev;
 u8 gu_roi;
 bool gbset_roi;
+bool g_suspend_state = false;
 //u8 pre_finger_status = 0;
 unsigned char global_roi_data[ROI_DATA_READ_LENGTH + 1] = { 0 };
-
-static unsigned int buf_count_add=0;
-static unsigned int buf_count_neg=0;
-
-u8 buf_touch_data[30*POINT_READ_BUF] = { 0 };
+int ft8607_cap_test_fake_status =0;
+u8 buf_touch_data[POINT_READ_BUF] = { 0 };
 
 #ifdef CONFIG_TOUCHSCREEN_FTS_PSENSOR
 static struct sensors_classdev __maybe_unused sensors_proximity_cdev = {
@@ -642,20 +674,17 @@ static int fts_read_roidata(struct fts_ts_data *data)
 *******************************************************************************/
 static int fts_read_Touchdata(struct fts_ts_data *data)
 {
-	#ifdef CONFIG_TOUCHSCREEN_FTS_PSENSOR
-		int rc = 0;
-	#endif
-
-	#if FTS_GESTRUE_EN
-		u8 state;
-	#endif
-
+#ifdef CONFIG_TOUCHSCREEN_FTS_PSENSOR
+	int rc = 0;
+#endif
+#if FTS_GESTRUE_EN
+	u8 state;
+#endif
 	u8 buf[POINT_READ_BUF] = { 0 };
 	int ret = -1;
-
 	u8 state_roi = 0;
 
-	#if FTS_GESTRUE_EN
+#if FTS_GESTRUE_EN
 	if(data->suspended)
 	{
 		fts_read_reg(data->client, 0xd0, &state);
@@ -665,9 +694,8 @@ static int fts_read_Touchdata(struct fts_ts_data *data)
 		   return 1;
 	      }
 	}
-      #endif
-
-	#ifdef CONFIG_TOUCHSCREEN_FTS_PSENSOR
+#endif
+#ifdef CONFIG_TOUCHSCREEN_FTS_PSENSOR
 	if (fts_psensor_support_enabled() && data->pdata->psensor_support &&
 		data->psensor_pdata->tp_psensor_opened) {
 		rc = fts_read_tp_psensor_data(data);
@@ -685,26 +713,26 @@ static int fts_read_Touchdata(struct fts_ts_data *data)
 		if (data->suspended)
 			return 1;
 	}
-	#endif
-	
+#endif
 	ret = fts_i2c_read(data->client, buf, 1, buf, POINT_READ_BUF);
 	if (ret < 0) {
 		dev_err(&data->client->dev, "%s read touchdata failed.\n", __func__);
 		return ret;
 	}
 
-	buf_count_add++;
-	memcpy( buf_touch_data+(((buf_count_add-1)%30)*POINT_READ_BUF), buf, sizeof(u8)*POINT_READ_BUF );
+	memcpy(buf_touch_data, buf, sizeof(u8)*POINT_READ_BUF);
 
 	if(gu_roi)
 	{
-		fts_read_reg(data->client, 0x9c, &state_roi);
-       if(state_roi > 0)
-       {
-		  global_roi_data[ROI_DATA_READ_LENGTH] = state_roi;
-		  
-		  fts_read_roidata(data);
-	   }
+		ret = fts_read_reg(data->client, 0x9c, &state_roi);
+		if (ret < 0) {
+			FTS_DBG("read state_roi register failed.\n");
+		}
+		if(state_roi > 0)
+		{
+			global_roi_data[ROI_DATA_READ_LENGTH] = state_roi;
+			fts_read_roidata(data);
+		}
 	}
 	return 0;
 }
@@ -723,14 +751,9 @@ static void fts_report_value(struct fts_ts_data *data)
 	int uppoint = 0;
 	int touchs = 0;
 	u8 pointid = FTS_MAX_ID;
-	
 	u8 buf[POINT_READ_BUF] = { 0 };
 
-	buf_count_neg++;
-	
-	memcpy( buf,buf_touch_data+(((buf_count_neg-1)%30)*POINT_READ_BUF), sizeof(u8)*POINT_READ_BUF );
-
-
+	memcpy(buf, buf_touch_data, sizeof(u8)*POINT_READ_BUF);
 	memset(event, 0, sizeof(struct ts_event));
 
 	event->point_num=buf[FTS_TOUCH_POINT_NUM] & 0x0F;
@@ -741,7 +764,7 @@ static void fts_report_value(struct fts_ts_data *data)
 			break;
 		else
 			event->touch_point++;
-		
+
 		event->au16_x[i] =
 		    (s16) (buf[FTS_TOUCH_X_H_POS + FTS_ONE_TCH_LEN * i] & 0x0F) <<
 		    8 | (s16) buf[FTS_TOUCH_X_L_POS + FTS_ONE_TCH_LEN * i];
@@ -766,15 +789,15 @@ static void fts_report_value(struct fts_ts_data *data)
 		if((event->au8_touch_event[i]==0 || event->au8_touch_event[i]==2)&&(event->point_num==0))
 			return;
 	}
-	
+
 	for (i = 0; i < event->touch_point; i++)
 	{
 		input_mt_slot(data->input_dev, event->au8_finger_id[i]);
-		
+
 		if (event->au8_touch_event[i] == FTS_TOUCH_DOWN || event->au8_touch_event[i] == FTS_TOUCH_CONTACT)
 		{
 			input_mt_report_slot_state(data->input_dev, MT_TOOL_FINGER, true);
-			input_report_abs(data->input_dev, ABS_MT_TOUCH_MAJOR, 0x3f);
+			input_report_abs(data->input_dev, ABS_MT_TOUCH_MAJOR, 0x00);
 			input_report_abs(data->input_dev, ABS_MT_PRESSURE, event->pressure[i]);
 			input_report_abs(data->input_dev, ABS_MT_POSITION_X, event->au16_x[i]);
 			input_report_abs(data->input_dev, ABS_MT_POSITION_Y, event->au16_y[i]);
@@ -823,11 +846,16 @@ static void fts_report_value(struct fts_ts_data *data)
 static void fts_touch_irq_work(struct work_struct *work)
 {
 	int ret = -1;
-	
+
+	if (g_suspend_state) {
+		return;
+	}
+
 	ret = fts_read_Touchdata(fts_wq_data);
-	if (ret == 0)
+	if (ret == 0) {
 		fts_report_value(fts_wq_data);
-	
+	}
+	return;
 }
 static void fts_touch_irq_enable_work(struct work_struct *work)
 {
@@ -874,14 +902,12 @@ static int fts_gpio_configure(struct fts_ts_data *data, bool on)
 				goto err_irq_gpio_dir;
 			}
 
-			err = gpio_direction_output(data->pdata->reset_gpio, 0);
+			err = gpio_direction_output(data->pdata->reset_gpio, 1);
 			if (err) {
 				dev_err(&data->client->dev,
 				"set_direction for reset gpio failed\n");
 				goto err_reset_gpio_dir;
 			}
-			msleep(data->pdata->hard_rst_dly);
-			gpio_set_value_cansleep(data->pdata->reset_gpio, 1);
 		}
 
 		return 0;
@@ -1101,7 +1127,7 @@ err_pinctrl_get:
 
 int fts_ts_HW_reset(void)
 {
-	/* 暂时不进行硬件复位操作 */
+	
 	//return 0;
 	
 	gpio_set_value_cansleep(fts_wq_data->pdata->reset_gpio, 0);
@@ -1158,13 +1184,7 @@ static int fts_ts_start(struct device *dev)
 		goto err_gpio_configuration;
 	}
 
-	if (gpio_is_valid(data->pdata->reset_gpio)) {
-		gpio_set_value_cansleep(data->pdata->reset_gpio, 0);
-		msleep(data->pdata->hard_rst_dly);
-		gpio_set_value_cansleep(data->pdata->reset_gpio, 1);
-		msleep(120);
-	}
-
+	msleep(150);
 	enable_irq(data->client->irq);
 	data->suspended = false;
 
@@ -1223,7 +1243,7 @@ static int fts_ts_stop(struct device *dev)
 		fts_i2c_write(data->client, txbuf, sizeof(txbuf));
 	}
 
-	#ifdef FOCOL_POWER_SUPPLY
+#ifdef FOCOL_POWER_SUPPLY
 	if (data->pdata->power_on) {
 		err = data->pdata->power_on(false);
 		if (err) {
@@ -1237,17 +1257,17 @@ static int fts_ts_stop(struct device *dev)
 			goto pwr_off_fail;
 		}
 	}
-	#endif
+#endif
 
-	#ifdef MSM_NEW_VER
+#ifdef MSM_NEW_VER
 	if (data->ts_pinctrl) {
 		err = pinctrl_select_state(data->ts_pinctrl,
 					data->pinctrl_state_suspend);
 		if (err < 0)
 			dev_err(dev, "Cannot get suspend pinctrl state\n");
 	}
-	#endif
-	
+#endif
+
 	err = fts_gpio_configure(data, false);
 	if (err < 0) {
 		dev_err(&data->client->dev,
@@ -1260,16 +1280,16 @@ static int fts_ts_stop(struct device *dev)
 	return 0;
 
 gpio_configure_fail:
-	#ifdef MSM_NEW_VER
+#ifdef MSM_NEW_VER
 	if (data->ts_pinctrl) {
 		err = pinctrl_select_state(data->ts_pinctrl,
 					data->pinctrl_state_active);
 		if (err < 0)
 			dev_err(dev, "Cannot get active pinctrl state\n");
 	}
-	#endif
+#endif
 
-	#ifdef FOCOL_POWER_SUPPLY
+#ifdef FOCOL_POWER_SUPPLY
 	if (data->pdata->power_on) {
 		err = data->pdata->power_on(true);
 		if (err)
@@ -1287,8 +1307,8 @@ pwr_off_fail:
 		gpio_set_value_cansleep(data->pdata->reset_gpio, 1);
 	}
 	enable_irq(data->client->irq);
-	#endif
-	
+#endif
+
 	return err;
 }
 
@@ -1366,6 +1386,7 @@ int fts_ts_resume(struct device *dev)
 	u8 regaddr=0x8C; //Cover addr
 	u8 i2c_write_buf[10] = {0};
 	int i = 0;
+	u8 read_roi_enable = 0;
 
 	FTS_DBG("\n");
 
@@ -1391,11 +1412,24 @@ int fts_ts_resume(struct device *dev)
 	err = fts_ts_start(dev);
 	if (err < 0)
 		return err;
+
 	mutex_lock(&fts_input_dev->mutex);
 
 	/* write roi_enable 0x9b */
-	fts_write_reg(fts_i2c_client, 0x9b, g_Roi_Enable_9B_RegValue);
-	FTS_DBG("roi_enable = %d", g_Roi_Enable_9B_RegValue);
+	for(i = 0; i < FTS_WRITE_ROIENABLE_RETRY_TIMES; i++) {
+		fts_write_reg(fts_i2c_client, FTS_REG_ROI_ENABLE, g_Roi_Enable_9B_RegValue);
+		fts_read_reg(fts_i2c_client, FTS_REG_ROI_ENABLE, &read_roi_enable);
+		if (1 == read_roi_enable) {
+			break;
+		}
+		FTS_DBG("write roi_enable register failed, retry:%d times", i);
+		msleep(20);
+	}
+	if (FTS_WRITE_ROIENABLE_RETRY_TIMES == i) {
+		FTS_DBG("write roi_enable register failed, read_roi_enable = %d", read_roi_enable);
+	} else {
+		FTS_DBG("read_roi_enable = %d", read_roi_enable);
+	}
 
 	/* Glove */
 	fts_write_reg(fts_i2c_client, 0xC0, g_ucGloveStatusBak);
@@ -1466,10 +1500,14 @@ static int fb_notifier_callback(struct notifier_block *self,
 	if (evdata && evdata->data && event == FB_EVENT_BLANK &&
 			fts_data && fts_data->client) {
 		blank = evdata->data;
-		if (*blank == FB_BLANK_UNBLANK)
+		if (*blank == FB_BLANK_UNBLANK) {
 			fts_ts_resume(&fts_data->client->dev);
-		else if (*blank == FB_BLANK_POWERDOWN)
+			g_suspend_state = false;
+		}
+		else if (*blank == FB_BLANK_POWERDOWN) {
 			fts_ts_suspend(&fts_data->client->dev);
+			g_suspend_state = true;
+		}
 	}
 
 	return 0;
@@ -1622,7 +1660,13 @@ static int fts_parse_dt(struct device *dev, struct fts_ts_platform_data *pdata)
 		pdata->group_id = temp_val;
 	else
 		dev_err(dev, "Unable to get group-id \n");
-
+	
+	rc = of_property_read_u32(np, "focaltech,TRT_cap_test_fake_status", &temp_val);
+	if (!rc)
+		ft8607_cap_test_fake_status = temp_val;
+	else
+		ft8607_cap_test_fake_status = 0;
+	
 	rc = of_property_read_u32(np, "focaltech,hard-reset-delay-ms", &temp_val);
 	if (!rc)
 		pdata->hard_rst_dly = temp_val;
@@ -2360,16 +2404,19 @@ static int fts_ts_probe(struct i2c_client *client, const struct i2c_device_id *i
 #endif
 
 	//enable_irq(client->irq);
-	queue_work(ts_irq_enable_workqueue, &touch_irq_enable_work);	
+	queue_work(ts_irq_enable_workqueue, &touch_irq_enable_work);
 	FTS_DBG(" successfully END.\n");
 	set_tp_type(11);
 	touch_hw_data.set_touch_probe_flag(TOUCH_DETECTED);
 	fts_auto_reset_init(); //Add for ESD check
+
+	fts_ft8716_getrawdata_max_min_thr_from_dts(&client->dev);
+
 	return 0;
 
 free_debug_dir:
 	debugfs_remove_recursive(data->dir);
-	
+
 #ifdef CONFIG_TOUCHSCREEN_FTS_PSENSOR
 unregister_psensor_input_device:
 	if (fts_psensor_support_enabled() && data->pdata->psensor_support)
@@ -2505,6 +2552,41 @@ static int fts_ts_remove(struct i2c_client *client)
 
 	input_unregister_device(data->input_dev);
 
+	if (g_stDtsCapaconfig.fts_full_raw_max_cap)
+	{
+		vfree(g_stDtsCapaconfig.fts_full_raw_max_cap);
+		g_stDtsCapaconfig.fts_full_raw_max_cap = NULL;
+	}
+	if (g_stDtsCapaconfig.fts_full_raw_min_cap)
+	{
+		vfree(g_stDtsCapaconfig.fts_full_raw_min_cap);
+		g_stDtsCapaconfig.fts_full_raw_min_cap = NULL;
+	}
+	if (g_stDtsCapaconfig.fts_noise_limit)
+	{
+		vfree(g_stDtsCapaconfig.fts_noise_limit);
+		g_stDtsCapaconfig.fts_noise_limit = NULL;
+	}
+	if (g_stDtsCapaconfig.fts_tx2tx_limit)
+	{
+		vfree(g_stDtsCapaconfig.fts_tx2tx_limit);
+		g_stDtsCapaconfig.fts_tx2tx_limit = NULL;
+	}
+	if (g_stDtsCapaconfig.fts_rx2rx_limit)
+	{
+		vfree(g_stDtsCapaconfig.fts_rx2rx_limit);
+		g_stDtsCapaconfig.fts_rx2rx_limit = NULL;
+	}
+	if (g_stDtsCapaconfig.fts_cb_min_limit)
+	{
+		vfree(g_stDtsCapaconfig.fts_cb_min_limit);
+		g_stDtsCapaconfig.fts_cb_min_limit = NULL;
+	}
+	if (g_stDtsCapaconfig.fts_cb_max_limit)
+	{
+		vfree(g_stDtsCapaconfig.fts_cb_max_limit);
+		g_stDtsCapaconfig.fts_cb_max_limit = NULL;
+	}
 	return 0;
 }
 

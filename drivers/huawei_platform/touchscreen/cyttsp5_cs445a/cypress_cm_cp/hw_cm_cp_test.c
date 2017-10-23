@@ -62,6 +62,9 @@
     {"Carmel","CS445", 0,"ofilm"},
     {"Carmel","CS445", 1,"eely"},
     {"Carmel","CS445", 2,"truly"},
+    {"KOBE","CS448", 0,"ofilm"},//for kobe
+    {"KOBE","CS448", 2,"eely"},//for kobe
+    {"KOBE","CS448", 18,"toptouch"},//for kobe
  };
 
 #define CM_CP_TEST_SUCCESS 0
@@ -79,12 +82,17 @@
 atomic_t mmi_test_status = ATOMIC_INIT(0);
 #define RAW_DATA_SIZE (PAGE_SIZE * 32)
 static struct cyttsp5_core_commands *cmd;
-
+#ifdef FEIMA3_FLAG
+#define TP_CONFIG_FILE_PATH "/product/etc/tp_test_parameters/"
+#else
 #define TP_CONFIG_FILE_PATH "/system/etc/tp_test_parameters/"
-
+#endif
 extern struct device *gdev;
 extern void cyttsp5_start_wd_timer(struct cyttsp5_core_data *cd);
 extern void cyttsp5_stop_wd_timer(struct cyttsp5_core_data *cd);
+extern int cyttsp5_hw_hard_reset(struct cyttsp5_core_data *cd);
+extern int cyttsp5_platform_detect_read(struct device *dev, void *buf, int size);
+
 
 int cyttsp5_command_response(struct device *dev,u8 *buf)
 {
@@ -198,6 +206,7 @@ static int cyttsp5_get_tp_config_file(struct device *dev, char *parameter_file, 
                 error = strncasecmp(hw_panel_info[i].chip_name, chip_name, strlen(hw_panel_info[i].chip_name));
                 if(error == 0) {
                     strncat(config_file,hw_panel_info[i].id2str,strlen(hw_panel_info[i].id2str));
+                    cd->cpdata->module_name = (const char *)hw_panel_info[i].id2str;
                 }
             }
         }
@@ -211,9 +220,7 @@ static int cyttsp5_get_tp_config_file(struct device *dev, char *parameter_file, 
 out:
     return error;
 }
-
-
-     
+ 
 int cyttsp5_cm_cp_test(struct seq_file *m, void *v)
 {
     int error = 0;
@@ -233,11 +240,23 @@ int cyttsp5_cm_cp_test(struct seq_file *m, void *v)
 
     if(atomic_read(&mmi_test_status)){
         tp_log_err("%s cm_cp_test already has been called.\n",__func__);
-        seq_printf(m, "1F-software_reason");
+        seq_printf(m, "0F-software_reason");
         return -1;
     }
 
     atomic_set(&mmi_test_status, 1);
+    if (cd->cpdata->detect) {
+           tp_log_info("%s %d: Detect HW\n", __func__, __LINE__);
+           error = cd->cpdata->detect(cd->cpdata, cd->dev, 
+				cyttsp5_platform_detect_read);
+		if (error) {
+			tp_log_err("%s %d: I2C error,  No HW detected, rc = %d\n", __func__, __LINE__, error);
+			seq_printf(m, "0F-I2C FAIL");
+			error = -ENODEV;
+			goto out;
+		}
+	}
+
     tp_log_info("%s, cm_cp_test proc buffer size:%u\n", __func__, (unsigned int)m->size);
     if(m->size <= RAW_DATA_SIZE/4) {
         m->count = m->size;
@@ -261,20 +280,32 @@ int cyttsp5_cm_cp_test(struct seq_file *m, void *v)
     }
     tp_log_debug("%s,  filp_open %s success.\n", __func__, config_filename);
 
-    parameter_file = filp_open(parameter_filename, O_RDONLY, 0);
-    if (IS_ERR(parameter_file)){
-        tp_log_err("%s,  filp_open error, file name is %s.\n", __func__, parameter_filename);
-        error = -1;
-        seq_printf(m, "1F-software_reason");
-        goto exit_open_parameter_file;
+    /*
+     * ttda solution not need paramter file any more
+     */
+    if (!cd->pdata->core_pdata->ttda_cap_test_enable) {
+        parameter_file = filp_open(parameter_filename, O_RDONLY, 0);
+        if (IS_ERR(parameter_file)) {
+            tp_log_err("%s,  filp_open error, file name is %s.\n", __func__,
+                parameter_filename);
+            error = -1;
+            seq_printf(m, "1F-software_reason");
+            goto exit_open_parameter_file;
+        }
+        tp_log_debug("%s,  filp_open %s success.\n", __func__, parameter_filename);
     }
-    tp_log_debug("%s,  filp_open %s success.\n", __func__, parameter_filename);
     cyttsp5_stop_wd_timer(cd);
 
-    seq_printf(m, "1P-");
-    error = cm_cp_test_run(NULL, parameter_file, config_file,
+    if (cd->pdata->core_pdata->ttda_cap_test_enable) {
+        error = cm_cp_test_run_ttda(dev, config_file,
+                        m, run_cm_test, run_cp_test,
+                        &cm_test_pass, &cp_test_pass);
+    } else {
+        seq_printf(m, "1P-");
+        error = cm_cp_test_run(NULL, parameter_file, config_file,
                         m, vdda, run_cm_test, run_cp_test,
                         &cm_test_pass, &cp_test_pass);
+    }
 
     if (run_cm_test){
           if (cm_test_pass){
@@ -303,12 +334,15 @@ int cyttsp5_cm_cp_test(struct seq_file *m, void *v)
 
     cyttsp5_start_wd_timer(cd);
 
-    filp_close(parameter_file, NULL);
+    if (!cd->pdata->core_pdata->ttda_cap_test_enable) {
+        filp_close(parameter_file, NULL);
+    }
 exit_open_parameter_file:
     filp_close(config_file, NULL);
 exit_open_config_file:
     set_fs(fs);
 out:
+    cyttsp5_hw_hard_reset(cd);
     atomic_set(&mmi_test_status, 0);
     tp_log_info("%s, cm_cp_test proc done\n", __func__);
     return error;

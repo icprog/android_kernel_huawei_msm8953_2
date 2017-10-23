@@ -405,8 +405,8 @@ static int bh1745_dsm_init(struct rgb_bh1745_data *data)
 		BH1745_ERR("%s@%d register dsm bh1745_als_dclient failed!\n",__func__,__LINE__);
 		return -ENOMEM;
 	}
-
-	bh1745_als_dclient->driver_data = data;
+	/*for dmd*/
+	//bh1745_als_dclient->driver_data = data;
 
 	data->als_test_exception.reg_buf = kzalloc(512, GFP_KERNEL);
 	if(!data->als_test_exception.reg_buf){

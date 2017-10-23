@@ -56,6 +56,9 @@
 
 #define PASS    "PASS"
 #define FAIL    "FAIL"
+#define I2C_PASS 	1
+extern uint8_t g_family_type;
+
 extern struct device *gdev;
 #define PRINT_RESULT(index ,value, file) \
 do {\
@@ -125,42 +128,44 @@ static int print_cm_info(struct seq_file *file, struct configuration *configurat
         seq_printf(file, "\n");
     }
 
-    if(result->cm_gradient_row) {
-        seq_printf(file, "delta_columns_row:\n");
-        for (i = 0; i < result->rx_num ; i++) {
-            seq_printf(file, ",%d",0);//the fitst delta column always 0
-            for (j = 0; j < result->tx_num-1; j++)
-                 seq_printf(file, ",%d",(int)result->cm_sensor_column_delta[j *result->rx_num + i]);
-            seq_printf(file, "\n");
+    if(g_family_type != 0) {
+        if(result->cm_gradient_row) {
+            seq_printf(file, "delta_columns_row:\n");
+            for (i = 0; i < result->rx_num ; i++) {
+                seq_printf(file, ",%d",0);//the fitst delta column always 0
+                for (j = 0; j < result->tx_num-1; j++)
+                    seq_printf(file, ",%d",(int)result->cm_sensor_column_delta[j *result->rx_num + i]);
+                seq_printf(file, "\n");
+            }
         }
-    }
-    if(result->cm_sensor_column_delta) {
-        seq_printf(file, "delta_columns:\n");
-        for (i = 0; i < result->rx_num ; i++) {
-            seq_printf(file, ",%d",0);//the fitst delta column always 0
-            for (j = 0; j < result->tx_num-1; j++)
-                 seq_printf(file, ",%d",(int)result->cm_sensor_column_delta[j *result->rx_num + i]);
-            seq_printf(file, "\n");
+        if(result->cm_sensor_column_delta) {
+            seq_printf(file, "delta_columns:\n");
+            for (i = 0; i < result->rx_num ; i++) {
+                seq_printf(file, ",%d",0);//the fitst delta column always 0
+                for (j = 0; j < result->tx_num-1; j++)
+                    seq_printf(file, ",%d",(int)result->cm_sensor_column_delta[j *result->rx_num + i]);
+                seq_printf(file, "\n");
+            }
         }
-    }
-    if(result->cm_sensor_row_delta) {
-        seq_printf(file, "delta_row:\n");
-        for (j = 0; j < result->tx_num; j++)//the first delta row always 0
-            seq_printf(file, ",%d",0);
-        seq_printf(file, "\n");
-        for (i = 0; i < result->rx_num-1; i++) {
-            for (j = 0; j < result->tx_num; j++)
-                 seq_printf(file, ",%d",(int)result->cm_sensor_row_delta[j *result->rx_num + i]);
+        if(result->cm_sensor_row_delta) {
+            seq_printf(file, "delta_row:\n");
+            for (j = 0; j < result->tx_num; j++)//the first delta row always 0
+                seq_printf(file, ",%d",0);
             seq_printf(file, "\n");
+            for (i = 0; i < result->rx_num-1; i++) {
+                for (j = 0; j < result->tx_num; j++)
+                    seq_printf(file, ",%d",(int)result->cm_sensor_row_delta[j *result->rx_num + i]);
+                seq_printf(file, "\n");
+            }
         }
+        seq_printf(file, ",1,%08x",result->device_id_high);seq_printf(file, "%08x\n",result->device_id_low);
+        seq_printf(file, "%s - %s,%s\n", SENSOR_CM_VALIDATION,"Columns Delta Matrix",(result->cm_sensor_col_delta_pass) ? PASS : FAIL);
+        seq_printf(file, "%s - %s,%s\n", SENSOR_CM_VALIDATION,"Element by Element",(result->cm_sensor_validation_pass) ? PASS : FAIL);
+        seq_printf(file, "%s - %s,%s\n", SENSOR_CM_VALIDATION,"Rows Delta Matrix",(result->cm_sensor_row_delta_pass) ? PASS : FAIL);	
+        seq_printf(file, "%s - %s,%s,%d\n", SENSOR_CM_VALIDATION,"Sensor Range","Cm_sensor_avg",(int)result->cm_sensor_average);
+        seq_printf(file, "%s - %s,%s,%d\n", SENSOR_CM_VALIDATION,"Sensor Range","Sensor Range",result->cm_sensor_delta);
+        seq_printf(file, "%s - %s,%s\n", SENSOR_CM_VALIDATION,"Sensor Range",(result->cm_sensor_delta_pass)? PASS : FAIL);
     }
-    seq_printf(file, ",1,%08x",result->device_id_high);seq_printf(file, "%08x\n",result->device_id_low);
-    seq_printf(file, "%s - %s,%s\n", SENSOR_CM_VALIDATION,"Columns Delta Matrix",(result->cm_sensor_col_delta_pass) ? PASS : FAIL);
-    seq_printf(file, "%s - %s,%s\n", SENSOR_CM_VALIDATION,"Element by Element",(result->cm_sensor_validation_pass) ? PASS : FAIL);
-    seq_printf(file, "%s - %s,%s\n", SENSOR_CM_VALIDATION,"Rows Delta Matrix",(result->cm_sensor_row_delta_pass) ? PASS : FAIL);	
-    seq_printf(file, "%s - %s,%s,%d\n", SENSOR_CM_VALIDATION,"Sensor Range","Cm_sensor_avg",(int)result->cm_sensor_average);
-    seq_printf(file, "%s - %s,%s,%d\n", SENSOR_CM_VALIDATION,"Sensor Range","Sensor Range",result->cm_sensor_delta);
-    seq_printf(file, "%s - %s,%s\n", SENSOR_CM_VALIDATION,"Sensor Range",(result->cm_sensor_delta_pass)? PASS : FAIL);
 
 exit:
     return ret;
@@ -179,13 +184,14 @@ static int print_cp_info(struct seq_file *file, struct configuration *configurat
     }
     /*print cp_sensor_data*/
 
-    seq_printf(file, ",Cp_delta_rx,%d\n",result->cp_sensor_rx_delta);
-    seq_printf(file, ",Cp_delta_tx,%d\n",result->cp_sensor_tx_delta);
-    seq_printf(file, ",Cp_sensor_avg_rx,%d\n",(int)result->cp_sensor_rx_average);
-    seq_printf(file, ",Cp_sensor_avg_tx,%d\n",(int)result->cp_sensor_tx_average);
-    seq_printf(file, ",Cp_sensor_cal_rx,%d\n",(int)result->cp_sensor_rx_calibration);
-    seq_printf(file, ",Cp_sensor_cal_tx,%d\n",(int)result->cp_sensor_tx_calibration);
-
+    if(g_family_type != 0) {
+        seq_printf(file, ",Cp_delta_rx,%d\n",result->cp_sensor_rx_delta);
+        seq_printf(file, ",Cp_delta_tx,%d\n",result->cp_sensor_tx_delta);
+        seq_printf(file, ",Cp_sensor_avg_rx,%d\n",(int)result->cp_sensor_rx_average);
+        seq_printf(file, ",Cp_sensor_avg_tx,%d\n",(int)result->cp_sensor_tx_average);
+        seq_printf(file, ",Cp_sensor_cal_rx,%d\n",(int)result->cp_sensor_rx_calibration);
+        seq_printf(file, ",Cp_sensor_cal_tx,%d\n",(int)result->cp_sensor_tx_calibration);
+    }
     if(result->cp_sensor_rx_raw_data) {
         seq_printf(file, "cp_sensor_rx_raw_data:\n");
         for(i = 0 ; i < result->rx_num; i++)
@@ -230,27 +236,48 @@ int result_save(struct seq_file *file, struct configuration *configuration,
         goto exit;
     }
     //printk("result:");
-    //seq_printf(file, "result:");
-    PRINT_RESULT(0, result->test_summary, file);
-    if(result->cm_test_run) {
-        PRINT_RESULT(3, result->cm_test_pass, file);
-        PRINT_RESULT(4, result->cm_sensor_validation_pass, file);
-        PRINT_RESULT(5, result->cm_sensor_col_delta_pass, file);
-        PRINT_RESULT(6, result->cm_sensor_row_delta_pass, file );
+    seq_printf(file, "result:");
+
+    if (g_family_type == 0) { // gen5
+        tp_log_info("result:%d-%d-%d-%d-%d-%d-%d-%d\n", I2C_PASS, result->cm_test_pass, result->cm_sensor_validation_pass,
+                   result->cm_sensor_col_delta_pass, result->cm_sensor_row_delta_pass, result->cp_test_pass, result->cp_rx_validation_pass,
+                   result->cp_tx_validation_pass);
+
+        PRINT_RESULT(0, I2C_PASS, file);
+        if(result->cm_test_run) {
+            PRINT_RESULT(1, result->cm_test_pass, file);
+            PRINT_RESULT(2, result->cm_sensor_validation_pass, file);
+            PRINT_RESULT(3, result->cm_sensor_col_delta_pass, file);
+            PRINT_RESULT(4, result->cm_sensor_row_delta_pass, file );
+        }
+        if(result->cp_test_run) {
+            PRINT_RESULT(5, result->cp_test_pass, file );
+            PRINT_RESULT(6, result->cp_rx_validation_pass, file);
+            PRINT_RESULT(7, result->cp_tx_validation_pass, file);
+        }
+	    seq_printf(file, "\n");
+    } else {
+        PRINT_RESULT(0, result->test_summary, file);
+        if(result->cm_test_run) {
+            PRINT_RESULT(3, result->cm_test_pass, file);
+            PRINT_RESULT(4, result->cm_sensor_validation_pass, file);
+            PRINT_RESULT(5, result->cm_sensor_col_delta_pass, file);
+            PRINT_RESULT(6, result->cm_sensor_row_delta_pass, file );
+        }
+        if(result->cp_test_run) {
+            PRINT_RESULT(7, result->cp_test_pass, file );
+            PRINT_RESULT(8, result->cp_rx_validation_pass, file);
+            PRINT_RESULT(9, result->cp_tx_validation_pass, file);
+            PRINT_RESULT(10, result->cp_sensor_delta_pass, file);
+        }
+        if((0 ==result->cm_test_pass)||(0 ==result->cp_test_pass))
+        {
+            seq_printf(file, "panel_reason-");
+        }
+        seq_printf(file, "%s\n",cd->cpdata->chip_name);
     }
-    if(result->cp_test_run) {
-        PRINT_RESULT(7, result->cp_test_pass, file );
-        PRINT_RESULT(8, result->cp_rx_validation_pass, file);
-        PRINT_RESULT(9, result->cp_tx_validation_pass, file);
-	    PRINT_RESULT(10, result->cp_sensor_delta_pass, file);
-    }
-    if((0 ==result->cm_test_pass)||(0 ==result->cp_test_pass))
-    {
-        seq_printf(file, "panel_reason-");
-    }
-    seq_printf(file, "%s\n",cd->cpdata->chip_name);
     seq_printf(file ,"rx_num:%d, tx_num:%d\n", result->rx_num, result->tx_num);
-    seq_printf(file ,"button_num:%d, firmware_version:0x%x\n", result->button_num, result->config_ver);
+    seq_printf(file ,"button_num:%d, firmware_version:0x%x, Panel module name: %s\n", result->button_num, result->config_ver, cd->cpdata->module_name);
   
     print_short_test_info(file, configuration, result);
     if(result->cm_test_run) {

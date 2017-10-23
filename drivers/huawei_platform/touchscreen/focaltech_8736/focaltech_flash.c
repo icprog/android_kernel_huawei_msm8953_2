@@ -1,6 +1,35 @@
+/*
+ *
+ * FocalTech fts TouchScreen driver.
+ * 
+ * Copyright (c) 2010-2015, Focaltech Ltd. All rights reserved.
+ *
+ * This software is licensed under the terms of the GNU General Public
+ * License version 2, as published by the Free Software Foundation, and
+ * may be copied, distributed, and modified under those terms.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ */
 
-
- 
+ /*******************************************************************************
+*
+* File Name: Focaltech_IC_Program.c
+*
+* Author: Xu YongFeng
+*
+* Created: 2015-01-29
+*   
+* Modify by mshl on 2015-10-26
+*
+* Abstract:
+*
+* Reference:
+*
+*******************************************************************************/
 
 /*******************************************************************************
 * 1.Included header files
@@ -93,7 +122,6 @@
 * Static variables
 *******************************************************************************/
 static unsigned char * CTP_FT_FW = NULL;
-u8 g_fw_version_info = 0;
 static unsigned char CTPM_FW[] = {
 //	#include "FT_Upgrade_App.i"
 	#include "FT8716_FW_TIANMA_HUAWEI_MILAN_5.5inch_app.i"
@@ -460,12 +488,14 @@ void fts_get_upgrade_array(void)
 		}
 		FTS_DBG("[FTS] %s reg FTS_REG_CHIP_ID address:0x%x, chip_id = 0x%x\n", __func__, FTS_REG_CHIP_ID, chip_id);
 
+		// lifenshi add 20160617	{{
 		ret = fts_read_reg(fts_i2c_client, FTS_REG_CHIP_ID2, &chip_id2);
 		if (ret<0)
 		{
 			FTS_DBG(" read FTS_REG_CHIP_ID2, register address:0x%x value fail", FTS_REG_CHIP_ID2);
 		}
 		FTS_DBG("%s FTS_REG_CHIP_ID2 register address:0x%x, chip_id2 = 0x%x",  __func__, FTS_REG_CHIP_ID2, chip_id2);
+		// lifenshi add 20160617	}}
 
 		if(0x87 == chip_id && ( 0x16==chip_id2 || 0x36==chip_id2) )
 		{
@@ -3272,6 +3302,7 @@ int fts_ctpm_fw_upgrade_with_app_file(struct i2c_client *client, char *firmware_
 {
 	u8 *pbt_buf = NULL;
 	int i_ret=0;
+	u8 fw_version_info = 0;
 	int fwsize = fts_GetFirmwareSize(firmware_name);
 	printk("**********[FTS] %s start****************\n", __func__);
 	if (fwsize <= 0) 
@@ -3293,6 +3324,7 @@ int fts_ctpm_fw_upgrade_with_app_file(struct i2c_client *client, char *firmware_
 		return -EIO;
 	}
 	FTS_COMMON_DBG("fw version is [0x%d]\n", pbt_buf[270]);
+	FTS_COMMON_DBG("chip_id:0x%x\n", fts_updateinfo_curr.CHIP_ID);
 	if ((fts_updateinfo_curr.CHIP_ID==0x55) ||(fts_updateinfo_curr.CHIP_ID==0x08) ||(fts_updateinfo_curr.CHIP_ID==0x0a))
 	{
 		i_ret = fts_5x06_ctpm_fw_upgrade(client, pbt_buf, fwsize);
@@ -3366,11 +3398,11 @@ int fts_ctpm_fw_upgrade_with_app_file(struct i2c_client *client, char *firmware_
 	kfree(pbt_buf);
 	/* show fw in ic */
 	msleep(300);
-	i_ret = fts_read_reg(client, FTS_REG_FW_VER, &g_fw_version_info);
+	i_ret = fts_read_reg(client, FTS_REG_FW_VER, &fw_version_info);
 	if (i_ret<0) {
 		FTS_COMMON_DBG("failed to read fw in ic\n");
 	}
-	FTS_COMMON_DBG("upgrade success fw_version:[0x%d]\n", g_fw_version_info);
+	FTS_COMMON_DBG("upgrade success fw_version:[0x%d]\n", fw_version_info);
 	FTS_DBG(" %s. END. \n", __func__);
 	return i_ret;
 }
@@ -3553,23 +3585,17 @@ int fts_ctpm_fw_upgrade_with_i_file(struct i2c_client *client)
 		}
 	}
 
+	if (!CTP_FT_FW) {
+		FTS_DBG(" CTP_FT_FW alloctation memory failed\n");
+		return -ENOMEM;
+	}
+
 	FTS_COMMON_DBG("request_firmware Start--ret[%d]", ret);
 
-	//for (i = 0; i < 10; i++)
-	{
-		ret = request_firmware(&fw, FocalTech_FW_FILENAME, &fts_i2c_client->dev);
-
-		FTS_COMMON_DBG("request_firmware going--ret[%d]", ret);
-
-		if (ret == 0)
-		{
-			FTS_COMMON_DBG("request_firmware ok--ret[%d]", ret);
-			//break;
-		}
+	ret = request_firmware(&fw, FocalTech_FW_FILENAME, &fts_i2c_client->dev);
+	if (ret == 0) {
+		FTS_COMMON_DBG("request_firmware success\n");
 	}
-	FTS_COMMON_DBG("request_firmware end--ret[%d]", ret);	
-//	ret = request_firmware(&fw, FocalTech_FW_FILENAME, &fts_i2c_client->dev);
-
 	if (ret) {
 		dev_err(&fts_i2c_client->dev, "[FTS] failed to request firmware %s: %d\n",
 			FocalTech_FW_FILENAME, ret);
@@ -3593,7 +3619,6 @@ int fts_ctpm_fw_upgrade_with_i_file(struct i2c_client *client)
 
 	/* fw ver compare with bin ver */
 	i_ret = fts_read_reg(client, FTS_REG_FW_VER, &uc_tp_fm_ver);
-	g_fw_version_info = uc_tp_fm_ver;
 
 	/* bin ver <= fw ver no upgrade */
 	if ((uc_tp_fm_ver >= Ft8716_Ver[0]) && (uc_tp_fm_ver != 0xef))
@@ -3602,15 +3627,13 @@ int fts_ctpm_fw_upgrade_with_i_file(struct i2c_client *client)
 			vfree(CTP_FT_FW);
 			CTP_FT_FW = NULL;
 		}
-
 		FTS_COMMON_DBG("bin ver Ft8716_Ver[0x%x]--fw ver uc_tp_fm_ver[0x%x] no upgrade ", Ft8716_Ver[0], uc_tp_fm_ver);
-		
+
 		return FTS_NO_NEED_UPGRADE;
 	}
 
 	FTS_COMMON_DBG("bin ver Ft8716_Ver[0x%x]--fw ver uc_tp_fm_ver[0x%x] need upgrade ******** ", Ft8716_Ver[0], uc_tp_fm_ver);
 
-	FTS_DBG("\n");
 	FTS_DBG("fts_updateinfo_curr.CHIP_ID:0x%x. ", fts_updateinfo_curr.CHIP_ID);
 	/*judge the fw that will be upgraded
 	* if illegal, then stop upgrade and return.
@@ -3618,7 +3641,7 @@ int fts_ctpm_fw_upgrade_with_i_file(struct i2c_client *client)
 	if ((fts_updateinfo_curr.CHIP_ID==0x11) ||(fts_updateinfo_curr.CHIP_ID==0x12) ||(fts_updateinfo_curr.CHIP_ID==0x13) ||(fts_updateinfo_curr.CHIP_ID==0x14)
 		||(fts_updateinfo_curr.CHIP_ID==0x55) ||(fts_updateinfo_curr.CHIP_ID==0x06) ||(fts_updateinfo_curr.CHIP_ID==0x0a) ||(fts_updateinfo_curr.CHIP_ID==0x08))
 	{
-		if (fw_len < 8 || fw_len > 32 * 1024) 
+		if (fw_len < 8 || fw_len > 32 * 1024)
 		{
 			dev_err(&client->dev, "[FTS] %s:FW length error\n", __func__);
 			return -EIO;
@@ -3626,7 +3649,7 @@ int fts_ctpm_fw_upgrade_with_i_file(struct i2c_client *client)
 
 		if ((CTPM_FW[fw_len - 8] ^ CTPM_FW[fw_len - 6]) == 0xFF
 			&& (CTPM_FW[fw_len - 7] ^ CTPM_FW[fw_len - 5]) == 0xFF
-			&& (CTPM_FW[fw_len - 3] ^ CTPM_FW[fw_len - 4]) == 0xFF) 
+			&& (CTPM_FW[fw_len - 3] ^ CTPM_FW[fw_len - 4]) == 0xFF)
 		{
 			/*FW upgrade */
 			pbt_buf = CTPM_FW;
@@ -3842,13 +3865,8 @@ int fts_ctpm_auto_upgrade(struct i2c_client *client)
 	bool bReadIDOK = false;
 	char AppInfoBuf[50] = {0};
 	u8 reg_value = 0;
-	u8 reg_addr = 0;
+	u8 reg_addr = FTS_REG_FW_VER;
 	int err= 0;
-
-	/*
-		u8 reg_value = 0;
-		u8 reg_addr = 0;
-	*/
 
 	FTS_DBG("[FTS] %s.\n", __func__);
 
@@ -3882,23 +3900,6 @@ int fts_ctpm_auto_upgrade(struct i2c_client *client)
 			break;
 		}
 
-		//	20160618 read IC work mode for test {{
-		/*
-		reg_addr = 0x00;
-		reg_value = 0;
-		{
-			ret = fts_read_reg(fts_i2c_client, reg_addr, &reg_value);;
-			if (ret < 0) {
-				FTS_DBG("read register address:0x%x faild.\n", reg_addr);
-			} 
-			else {
-				FTS_DBG(" read work mode register address: 0x%x, get value:0x%x\n", reg_addr, reg_value);
-				break;
-			}
-		}
-		*/
-		//	20160618 read IC work mode }}
-
 		msleep(5);
 	}
 
@@ -3918,7 +3919,6 @@ int fts_ctpm_auto_upgrade(struct i2c_client *client)
 	}
 
 	i_ret = fts_read_reg(client, FTS_REG_FW_VER, &uc_tp_fm_ver);
-//	if(i_ret){	// remove	20160618
 	if(i_ret<0)
 	{
 		ERROR_COMMON_FTS("%s:%d, read FTS_REG_FW_VER error:%d", __func__, __LINE__, i_ret);
@@ -3931,59 +3931,58 @@ int fts_ctpm_auto_upgrade(struct i2c_client *client)
 
 	uc_i_file_fm_ver = fts_ctpm_get_i_file_ver();
 
-	if (1)
+	fts_auto_reset_suspend();
+	i_ret = fts_ctpm_fw_upgrade_with_i_file(client);
+	fts_auto_reset_resume();
+	if (i_ret == 0)
 	{
-		fts_auto_reset_suspend();
-		i_ret = fts_ctpm_fw_upgrade_with_i_file(client);
-		fts_auto_reset_resume();
-		if (i_ret == 0)	
+		msleep(300);
+		//uc_i_file_fm_ver = fts_ctpm_get_i_file_ver();
+		i_ret = fts_read_reg(client, FTS_REG_FW_VER, &uc_tp_fm_ver);
+		if(i_ret<0)
 		{
-			msleep(300);
-			//uc_i_file_fm_ver = fts_ctpm_get_i_file_ver();
-			i_ret = fts_read_reg(client, FTS_REG_FW_VER, &uc_tp_fm_ver);
-			if(i_ret<0)
-			{
-				ERROR_COMMON_FTS("%s:%d, read FTS_REG_FW_VER error:%d", __func__, __LINE__, i_ret);
-			}
-
-			FTS_DBG(" upgrade OK to new version 0x%x.\n",uc_tp_fm_ver);
-			//printk("[FTS] %s. upgrade OK to new version 0x%x.\n", __func__, uc_i_file_fm_ver);
-		} 
-		else
-		{
-			if (FTS_NO_NEED_UPGRADE == i_ret)
-			{
-				FTS_COMMON_DBG("No Need Upgrade");
-			}
-			else
-			{
-				ERROR_COMMON_FTS(" upgrade failed ret=%d.\n", i_ret);
-			}
-			
-			goto upgrade_failed;
+			ERROR_COMMON_FTS("%s:%d, read FTS_REG_FW_VER error:%d", __func__, __LINE__, i_ret);
 		}
+
+		FTS_DBG(" upgrade OK to new version 0x%x.\n",uc_tp_fm_ver);
+		//printk("[FTS] %s. upgrade OK to new version 0x%x.\n", __func__, uc_i_file_fm_ver);
+		goto upgrade_successed;
 	}
 	else
 	{
-		FTS_DBG("[FTS] %s. Not need upgrade.\n", __func__);
-		goto upgrade_failed;
+		if (FTS_NO_NEED_UPGRADE == i_ret)
+		{
+			FTS_COMMON_DBG("No Need Upgrade");
+			goto no_upgrade;
+		}
+		else
+		{
+			ERROR_COMMON_FTS(" upgrade failed ret=%d.\n", i_ret);
+			goto upgrade_failed;
+		}
 	}
+
 upgrade_failed:
-	reg_addr = 0xa6;
 	err = fts_i2c_read(client, &reg_addr, 1, &reg_value, 1);
 	if (err < 0)
 		dev_err(&client->dev, "threshold read failed");
 	snprintf(AppInfoBuf, 50, "focal8716_tianma_%02d", reg_value);
 	FTS_DBG("focal8716_tianma_%02d", reg_value);
-	app_info_set("touch_panel", AppInfoBuf);
+	err = app_info_set("touch_panel", AppInfoBuf);
+	if (err < 0) {
+		FTS_DBG("app_info_set: set touch_panel failed\n");
+	}
 	return -EIO;
+upgrade_successed:
 no_upgrade:
-	reg_addr = 0xa6;
 	err = fts_i2c_read(client, &reg_addr, 1, &reg_value, 1);
 	if (err < 0)
 		dev_err(&client->dev, "threshold read failed");
 	snprintf(AppInfoBuf, 50, "focal8716_tianma_%02d", reg_value);
 	FTS_DBG("focal8716_tianma_%02d", reg_value);
-	app_info_set("touch_panel", AppInfoBuf);
+	err = app_info_set("touch_panel", AppInfoBuf);
+	if (err < 0) {
+		FTS_DBG("app_info_set: set touch_panel failed\n");
+	}
 	return 0;
 }

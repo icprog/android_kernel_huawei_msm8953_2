@@ -16,8 +16,8 @@
 
 
 // 20160621
-#define TX_NUM_MAX			60
-#define RX_NUM_MAX			60
+#define TX_NUM_MAX			40
+#define RX_NUM_MAX			40
 
 
 #define MAX_PATH			256

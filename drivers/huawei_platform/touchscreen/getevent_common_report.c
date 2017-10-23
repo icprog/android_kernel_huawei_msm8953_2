@@ -779,6 +779,7 @@ static int touch_event_replay(struct getevent_info * getevent_para,struct geteve
 			msleep(2000);
 		}
 	}
+	/*del add BTN_TOUCH at end*/
 	
 	getevent_log_dbg("%s:out!\n",__func__);
 	return 0;

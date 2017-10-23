@@ -83,7 +83,7 @@ static int check_match_by_adc(void)
     int ret = 0;
     int rf_voltage = -50;
 
-    rf_voltage = get_antenna_sub_board_voltage();
+    rf_voltage = get_pmi_sub_voltage();
     pr_info("Antenna board adc voltage = %d\n", rf_voltage);
 
     if (rf_voltage >= antenna_adc_match_range[0] && rf_voltage <= antenna_adc_match_range[1]) {

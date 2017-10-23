@@ -55,6 +55,9 @@
 #define FTS_ESD_USE_REG_ADDR				0xED // fw中设定为0xED
 #define FTS_ESD_USE_REG_VALUE				0x87
 
+#define FTS_ESD_NORMAL_VALUE				0x55
+#define FTS_ESD_ERROR_VALUE				0xAA
+
 
 /*******************************************************************************
 * Private enumerations, structures and unions using typedef
@@ -84,7 +87,7 @@ static unsigned char g_esd_used_reg_value = FTS_ESD_USE_REG_VALUE;//chip id valu
 /*******************************************************************************
 * Global variable or extern global variabls/functions
 *******************************************************************************/
-unsigned char g_Fts_Tp_To_Lcd_Rst_Flag = 0x55; //TP通知LCD需要Rst
+unsigned char g_Fts_Tp_To_Lcd_Rst_Flag = FTS_ESD_NORMAL_VALUE; //TP通知LCD需要Rst
 
 /*******************************************************************************
 * Static function prototypes
@@ -243,6 +246,24 @@ int  fts_auto_reset_resume(void)
 	return 0;
 }
 
+unsigned char get_fts_tp_to_lcd_reset_flag(void)
+{
+	return g_Fts_Tp_To_Lcd_Rst_Flag;
+}
+
+void set_fts_tp_esd_flag_normal(void)
+{
+	g_Fts_Tp_To_Lcd_Rst_Flag = FTS_ESD_NORMAL_VALUE;
+}
+
+int is_fts_tp_esd_error(void)
+{
+	if (g_Fts_Tp_To_Lcd_Rst_Flag == FTS_ESD_NORMAL_VALUE)
+		return 0;
+	else
+		return -1;
+}
+
  /************************************************************************
  * Name: fts_esd_check_func
  * Brief: esd check function
@@ -261,13 +282,13 @@ static void fts_esd_check_func(void)
 	{
 		FTS_COMMON_DBG("read value fail.");	 
 	}
-	else if (uc_data_tmp == 0xaa)
+	else if (uc_data_tmp == FTS_ESD_ERROR_VALUE)
 	{
 		/* notify lcd driver rst */
-		g_Fts_Tp_To_Lcd_Rst_Flag = 0xaa;
+		g_Fts_Tp_To_Lcd_Rst_Flag = FTS_ESD_ERROR_VALUE;
 		ERROR_COMMON_FTS("Tp Rawdata Error Tp_To_Lcd_Rst_Flag[%d]", g_Fts_Tp_To_Lcd_Rst_Flag);
 
-		fts_write_reg_for_esd(0xED, 0x55);
+		fts_write_reg_for_esd(0xED, FTS_ESD_NORMAL_VALUE);
 	}
 
 	return;

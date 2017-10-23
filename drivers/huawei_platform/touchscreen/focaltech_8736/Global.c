@@ -28,6 +28,8 @@
 struct StruScreenSeting g_ScreenSetParam; //∆¡ƒª…Ë÷√≤Œ ˝
 struct stTestItem g_stTestItem[1][MAX_TEST_ITEM];
 struct structSCapConfEx g_stSCapConfEx;
+struct structDtsConfig g_stDtsCapaconfig;
+struct stEnableTestItems_DTS g_stEnableTestItems_DTS = {true};
 //struct structSCapConf g_stSCapConf;
 int g_TestItemNum = 0;
 char g_strIcName[MAX_IC_NAME_LEN] ={0};

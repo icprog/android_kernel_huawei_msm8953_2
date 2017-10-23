@@ -1,4 +1,25 @@
-
+/*
+ * cyttsp5_devtree.c
+ * Cypress TrueTouch(TM) Standard Product V5 Device Tree Support Module.
+ * For use with Cypress Txx5xx parts.
+ * Supported parts include:
+ * TMA5XX
+ *
+ * Copyright (C) 2013-2014 Cypress Semiconductor
+ *
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License
+ * version 2, and only version 2, as published by the
+ * Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * Contact Cypress Semiconductor at www.cypress.com <ttdrivers@cypress.com>
+ *
+ */
 
 #include <linux/device.h>
 #include <linux/err.h>
@@ -644,6 +665,16 @@ static struct cyttsp5_power_config *create_and_get_power_config(struct device_no
 		power_config->vbus_en_gpio = -1;
 		tp_log_warning("%s %d:[cy,vbus-en-gpio] read fail.\n", __func__, __LINE__);
 	}
+	rc = of_property_read_u32(core_node, "cy,vdd-value", &value);
+	if (!rc) {
+		power_config->vdd_value = value;
+		tp_log_info("%s,pdata->vdd_value = %d.\n",
+			__func__, power_config->vdd_value);
+	} else {
+		power_config->vdd_value = 2850000; //default value
+	}
+	tp_log_info("%s:vdd_value = %d\n", __func__,
+		power_config->vdd_value);
 
 	power_config->vdd_reg = NULL;
 	power_config->vbus_reg = NULL;
@@ -826,6 +857,29 @@ static struct cyttsp5_core_platform_data *create_and_get_core_pdata(
 		tp_log_err("%s %d:Read name product_name fail, rc = %d\n", __func__, __LINE__, rc);			
 		pdata->product_name = "Unknow";
 	}
+
+	/* parse TTDA enable flag */
+	rc = of_property_read_u32(core_node, "cy,ttda_cap_test_enable", &value);
+	if (!rc) {
+		pdata->ttda_cap_test_enable = value;
+		tp_log_err("%s,pdata->ttda_cap_test_enable = %d.\n",
+			__func__, pdata->ttda_cap_test_enable);
+	} else {
+		pdata->ttda_cap_test_enable = 0;
+	}
+	tp_log_info("%s:ttda_cap_test_enable = %d\n", __func__,
+		pdata->ttda_cap_test_enable);
+
+	rc = of_property_read_u32(core_node, "cy,pinctrl-set", &value);
+	if (!rc) {
+		pdata->pinctrl_set = value;
+		tp_log_err("%s,pdata->pinctrl_set = %d.\n",
+			__func__, pdata->pinctrl_set);
+	} else {
+		pdata->pinctrl_set = 0;
+	}
+	tp_log_info("%s:pinctrl_set = %d\n", __func__,
+		pdata->pinctrl_set);
 
 	rc = of_property_read_string(core_node, "tp_test_type", &pdata->tp_test_type);
     if (rc) {

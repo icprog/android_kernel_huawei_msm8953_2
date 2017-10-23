@@ -39,8 +39,8 @@
 #define PID_BOE_CANN_LEN 9
 #define PID_TM_CANN "CANN27110"
 #define PID_TM_CANN_LEN 9
-#define PID_LG_CANN "CANN27100"
-#define PID_LG_CANN_LEN 9
+#define PID_LG_CANN "CANN271006"
+#define PID_LG_CANN_LEN 10
 #define PID_LG_VENUS "S332U"
 #define PID_LG_LEN 5
 /*

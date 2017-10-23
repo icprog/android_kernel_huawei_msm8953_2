@@ -227,6 +227,8 @@ int synaptics_rmi4_parse_dt(struct device *dev, struct synaptics_dsx_platform_da
 	pdata->dtz_x1 = get_of_u32_val(np, "huawei,dtz_x1", 0);
 	
 	pdata->dtz_y1 = get_of_u32_val(np, "huawei,dtz_y1", 0);
+	
+	s3320_cap_test_fake_status = get_of_u32_val(np, "synaptics,TRT_cap_test_fake_status",0);
 
 	err = of_property_read_u32(np, "synaptics,glove_enabled", &tmp);
 	if (!err) {

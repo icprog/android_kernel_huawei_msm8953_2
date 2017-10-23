@@ -133,9 +133,36 @@ struct structSCapConfEx
 	bool bLeftKey3;
 	bool bRightKey1;
 	bool bRightKey2;
-	bool bRightKey3;	
+	bool bRightKey3;
 };
 
+
+struct stEnableTestItems_DTS
+{
+	bool Enable_RAWDATATest;
+	bool Enable_CBTest;
+	bool Enable_NOISETest;
+	bool Enable_TX2TXTest;
+	bool Enable_RX2RXTest;
+};
+
+struct structDtsConfig
+{
+	unsigned char channelxnum_dts;
+	unsigned char channelynum_dts;
+	int singleraw_upperlimit;
+	int singleraw_lowerlimit;
+	int cbunif_maxmin;
+	int cbunif_chx_linearity;
+	int cbunif_chy_linearity;
+	u16 *fts_full_raw_max_cap;
+	u16 *fts_full_raw_min_cap;
+	u16 *fts_noise_limit;
+	u16 *fts_tx2tx_limit;
+	u16 *fts_rx2rx_limit;
+	u16 *fts_cb_min_limit;
+	u16 *fts_cb_max_limit;
+};
 
 enum NORMALIZE_Type
 {
@@ -161,16 +188,13 @@ extern char result_reason_flag;
 extern unsigned char g_Roi_Enable_9B_RegValue;
 extern unsigned char g_CoverStatusBufBak[10];
 extern unsigned char g_ucGloveStatusBak;
-extern u8 g_fw_version_info;
-
 extern int g_TestItemNum;/*test item num*/
-
+extern bool g_suspend_state;
 #define MAX_IC_NAME_LEN 20
 extern char g_strIcName[MAX_IC_NAME_LEN];/*IC Name*/
 
-extern int fullraw_upperlimit;
-extern int fullraw_lowerlimit;
-
+extern struct stEnableTestItems_DTS g_stEnableTestItems_DTS;
+extern struct structDtsConfig g_stDtsCapaconfig;
 int GetPrivateProfileString(char *section, char *ItemName, char *defaultvalue, char *returnValue, char *IniFile);
 void focal_msleep(int ms);
 void SysDelay(int ms);
@@ -186,6 +210,8 @@ unsigned char Comm_Base_IIC_IO(unsigned char *pWriteBuffer, int  iBytesToWrite, 
 
 unsigned char EnterWork(void);
 unsigned char EnterFactory(void);
+
+void fts_ft8716_getrawdata_max_min_thr_from_dts(struct device *dev);
 
 
 #define FOCAL_DBG

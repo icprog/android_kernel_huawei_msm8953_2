@@ -68,8 +68,9 @@ int ilitek_upgrade_firmware(void)
 	int set_appinfo_ret;
 	CTPM_FW = vmalloc(FW_SIZE + 1);
 
-	if (!(*CTPM_FW)) {
+	if (NULL == CTPM_FW) {
 		tp_log_info("ilitek CTPM_FW alloctation memory failed\n");
+		return NOT_NEED_UPGRADE;
 	}
 	ap_startaddr = AP_STARTADDR;
 	ap_endaddr = AP_ENDADDR;

@@ -8,7 +8,7 @@
 #include <linux/i2c.h>//iic
 #include <linux/delay.h>//msleep
 #include "test_lib.h"
-
+#include "Global.h"
 #include "focaltech_core.h"
 
 //#define MAX_TEST_DATA_SIZE		(1024*8)
@@ -17,7 +17,6 @@
 #define MAX_BUF_LEN 128
 #define INI_SIZE (1024*8-5)
 extern struct i2c_client *fts_i2c_client;
-
 #define FTS_INI_FILEPATH "/mnt/sdcard/"  
 
 //获取配置文件大小, 用于分配内存读取配置
@@ -86,13 +85,10 @@ static int ft8736_ReadInIData(char *config_name, char *config_buf)
 */
 
 int gnFtsTestResult;
-int fullraw_upperlimit;
-int fullraw_lowerlimit;
-u32 *fts_full_raw_max_cap;
 
 char result_reason_flag = 1;
 
-#if 1
+#if 0
 static int fts_SaveTestData(char * file_name, char * data_buf, int iLen)
 {
 	struct file *pfile = NULL;
@@ -336,6 +332,7 @@ static int ft8736_get_testparam_direct(void)
 }
 #endif
 
+//frank add. 20160620
 //get test param direct. Not  from ini file.
 static int ft8716_get_testparam_direct(void)
 {
@@ -421,6 +418,8 @@ static int ft8716_get_testparam_direct(void)
 	fts_add_str_carrige(filedata, "PROJECT_CODE_TEST=0");
 	fts_add_str_carrige(filedata, "RAWDATA_TEST=1");
 	fts_add_str_carrige(filedata, "CB_TEST=1");
+	fts_add_str_carrige(filedata, "TX2TX_TEST=1");
+	fts_add_str_carrige(filedata, "RX2RX_TEST=1");
 	fts_add_str_carrige(filedata, "SHORT_CIRCUIT_TEST=1");
 	fts_add_str_carrige(filedata, "CHANNEL_NUM_TEST=1");
 	fts_add_str_carrige(filedata, "INT_PIN_TEST=0");
@@ -659,35 +658,110 @@ fail:
 void fts_ft8716_getrawdata_max_min_thr_from_dts(struct device *dev)
 {
 	struct device_node  *np = dev->of_node;
+	int size = 0;
+	int enable_rawdatatest = true;
+	int enable_cbtest = true;
 
 	FTS_COMMON_DBG("");
+	g_stDtsCapaconfig.channelxnum_dts = fts_get_of_u32_val(np, "focaltech,channel_Xnum", 18);
+	FTS_COMMON_DBG("channel_Xnum[%d]\n", g_stDtsCapaconfig.channelxnum_dts);
 
-	fullraw_upperlimit= fts_get_of_u32_val(np, "focaltech,fullraw_upperlimit", 13000);
-	FTS_COMMON_DBG("fullraw_upperlimit[%d]\n", fullraw_upperlimit);
+	g_stDtsCapaconfig.channelynum_dts = fts_get_of_u32_val(np, "focaltech,channel_Ynum", 30);
+	FTS_COMMON_DBG("channel_Ynum[%d]\n", g_stDtsCapaconfig.channelynum_dts);
 
-	fullraw_lowerlimit= fts_get_of_u32_val(np, "focaltech,fullraw_lowerlimit", 3000);
-	FTS_COMMON_DBG("fullraw_lowerlimit[%d]\n", fullraw_lowerlimit);
+	g_stDtsCapaconfig.cbunif_maxmin = fts_get_of_u32_val(np, "focaltech,cbunif_maxmin", 27);
+	FTS_COMMON_DBG("cbunif_maxmin[%d]\n", g_stDtsCapaconfig.cbunif_maxmin);
 
-	////////////////////////////////////////////////////////////////////////////////////////////////////
-	fts_full_raw_max_cap = vmalloc(30 * 18 * sizeof(*fts_full_raw_max_cap));
-	if (!fts_full_raw_max_cap) 
-	{
-		FTS_COMMON_DBG("error!!!!!!!!!!!!!--vmalloc(30 * 18 * sizeof(*fts_full_raw_max_cap), GFP_KERNEL);");
-		goto error;
+	g_stDtsCapaconfig.cbunif_chx_linearity = fts_get_of_u32_val(np, "focaltech,cbunif_chx_linearity", 70);
+	FTS_COMMON_DBG("cbunif_chx_linearity[%d]\n", g_stDtsCapaconfig.cbunif_chx_linearity);
+
+	g_stDtsCapaconfig.cbunif_chy_linearity = fts_get_of_u32_val(np, "focaltech,cbunif_chy_linearity", 70);
+	FTS_COMMON_DBG("cbunif_chy_linearity[%d]\n", g_stDtsCapaconfig.cbunif_chy_linearity);
+
+	g_stDtsCapaconfig.singleraw_upperlimit = fts_get_of_u32_val(np, "focaltech,singleraw_upperlimit", 13000);
+	FTS_COMMON_DBG("singleraw_upperlimit[%d]\n", g_stDtsCapaconfig.singleraw_upperlimit);
+
+	g_stDtsCapaconfig.singleraw_lowerlimit = fts_get_of_u32_val(np, "focaltech,singleraw_lowerlimit", 3000);
+	FTS_COMMON_DBG("singleraw_lowerlimit[%d]\n", g_stDtsCapaconfig.singleraw_lowerlimit);
+
+	g_stDtsCapaconfig.fts_full_raw_max_cap = fts_create_and_get_u16_array(np,"focaltech,fullraw_upperlimit", &size);
+	if (!g_stDtsCapaconfig.fts_full_raw_max_cap || size != g_stDtsCapaconfig.channelxnum_dts*g_stDtsCapaconfig.channelynum_dts) {
+		FTS_COMMON_DBG("unable to read focaltech,fullraw_upperlimit size=%d\n", size);
+		enable_rawdatatest = false;
+	}
+	else {
+		enable_rawdatatest = true;
 	}
 
-	FTS_COMMON_DBG("success--fts_full_raw_max_cap");
-	////////////////////////////////////////////////////////////////////////////////////////////////////
+	g_stDtsCapaconfig.fts_full_raw_min_cap = fts_create_and_get_u16_array(np,"focaltech,fullraw_lowerlimit", &size);
+	if (!g_stDtsCapaconfig.fts_full_raw_min_cap || size != g_stDtsCapaconfig.channelxnum_dts*g_stDtsCapaconfig.channelynum_dts) {
+		FTS_COMMON_DBG("unable to read focaltech,fullraw_lowerlimit size=%d\n", size);
+		enable_rawdatatest = false;
+	}
+	else {
+		enable_rawdatatest &= true;
+	}
 
-	goto success;
+	if(enable_rawdatatest == true) {
+		g_stEnableTestItems_DTS.Enable_RAWDATATest = true;
+	}
+	else {
+		g_stEnableTestItems_DTS.Enable_RAWDATATest = false;
+	}
+	g_stDtsCapaconfig.fts_cb_min_limit = fts_create_and_get_u16_array(np,"focaltech,fullcb_lowerlimit", &size);
+	if (!g_stDtsCapaconfig.fts_cb_min_limit || size != g_stDtsCapaconfig.channelxnum_dts*g_stDtsCapaconfig.channelynum_dts) {
+		FTS_COMMON_DBG("unable to read focaltech,fts_noise_limit size=%d\n", size);
+		enable_cbtest = false;
+	}
+	else {
+		enable_cbtest = true;
+	}
+	g_stDtsCapaconfig.fts_cb_max_limit = fts_create_and_get_u16_array(np,"focaltech,fullcb_upperlimit", &size);
+	if (!g_stDtsCapaconfig.fts_cb_max_limit || size != g_stDtsCapaconfig.channelxnum_dts*g_stDtsCapaconfig.channelynum_dts) {
+		FTS_COMMON_DBG("unable to read focaltech,fts_noise_limit size=%d\n", size);
+		enable_cbtest = false;
+	}
+	else {
+		enable_cbtest &= true;
+	}
+	if(enable_cbtest == true) {
+		g_stEnableTestItems_DTS.Enable_CBTest= true;
+	}
+	else {
+		g_stEnableTestItems_DTS.Enable_CBTest = false;
+	}
+	g_stDtsCapaconfig.fts_noise_limit = fts_create_and_get_u16_array(np,"focaltech,fts_noise_limit", &size);
+	if (!g_stDtsCapaconfig.fts_noise_limit || size != g_stDtsCapaconfig.channelxnum_dts*g_stDtsCapaconfig.channelynum_dts) {
+		FTS_COMMON_DBG("unable to read focaltech,fts_noise_limit size=%d\n", size);
+		g_stEnableTestItems_DTS.Enable_NOISETest = false;
+	}
+	else {
+		g_stEnableTestItems_DTS.Enable_NOISETest = true;
+	}
+	g_stDtsCapaconfig.fts_tx2tx_limit = fts_create_and_get_u16_array(np,"focaltech,fts_tx2tx_limit", &size);
+	if (!g_stDtsCapaconfig.fts_tx2tx_limit || size != (g_stDtsCapaconfig.channelxnum_dts-1)*g_stDtsCapaconfig.channelynum_dts) {
+		FTS_COMMON_DBG("unable to read focaltech,fts_tx2tx_limit size=%d\n", size);
+		g_stEnableTestItems_DTS.Enable_TX2TXTest = false;
+	}
+	else {
+		g_stEnableTestItems_DTS.Enable_TX2TXTest = true;
+	}
+	g_stDtsCapaconfig.fts_rx2rx_limit = fts_create_and_get_u16_array(np,"focaltech,fts_rx2rx_limit", &size);
+	if (!g_stDtsCapaconfig.fts_rx2rx_limit || size != g_stDtsCapaconfig.channelxnum_dts*(g_stDtsCapaconfig.channelynum_dts-1)) {
+		FTS_COMMON_DBG("unable to read focaltech,fts_rx2rx_limit size=%d\n", size);
+		g_stEnableTestItems_DTS.Enable_RX2RXTest = false;
+	}
+	else {
+		g_stEnableTestItems_DTS.Enable_RX2RXTest = true;
+	}
+	if ((g_stEnableTestItems_DTS.Enable_RAWDATATest & g_stEnableTestItems_DTS.Enable_CBTest & g_stEnableTestItems_DTS.Enable_NOISETest &
+		g_stEnableTestItems_DTS.Enable_RX2RXTest & g_stEnableTestItems_DTS.Enable_TX2TXTest) == true) {
+		FTS_COMMON_DBG("success^^^^^^^^--fts_ft8716_getrawdata_max_min_thr_from_dts");
+	}
+	else {
+		FTS_COMMON_DBG("failed^^^^^^^^--fts_ft8716_getrawdata_max_min_thr_from_dts");
+	}
 
-error:
-	FTS_COMMON_DBG("error!!!!!!!!!!!!!--fts_ft8716_getrawdata_max_min_thr_from_dts");
-	return;
-
-success:
-	FTS_COMMON_DBG("success^^^^^^^^--fts_ft8716_getrawdata_max_min_thr_from_dts");
-	
 	return;
 }
 
@@ -700,7 +774,7 @@ ssize_t fts_fts8716_getcapacitancedata_show(struct kobject *dev,struct kobj_attr
 	ssize_t num_read_chars = 0;
 
 	char result_buf[MAX_BUF_LEN] = {0};
-	fts_ft8716_getrawdata_max_min_thr_from_dts(&fts_i2c_client->dev);
+	//fts_ft8716_getrawdata_max_min_thr_from_dts(&fts_i2c_client->dev);
 
 	result_reason_flag = 1;
 	gnFtsTestResult = 0;
@@ -728,7 +802,7 @@ ssize_t fts_fts8716_getcapacitancedata_show(struct kobject *dev,struct kobj_attr
 	init_i2c_write_func(focal_i2c_Write);
 	init_i2c_read_func(focal_i2c_Read);
 
-	/* 设置功能开关 */
+	/* config test item */
 	if(ft8716_get_testparam_direct() <0)
 	{
 		FTS_DBG("[FTS] get testparam from ini failure\n");
@@ -754,21 +828,21 @@ ssize_t fts_fts8716_getcapacitancedata_show(struct kobject *dev,struct kobj_attr
 		}
 
 		iTestDataLen = get_test_data(testdata);
-		fts_SaveTestData("testdata.csv", testdata, iTestDataLen);
+		//fts_SaveTestData("testdata.csv", testdata, iTestDataLen);
 		FTS_DBG("[FTS] iTestDataLen:%d  PAGE_SIZE:%ld\n",iTestDataLen,PAGE_SIZE);
 
 		memset(testdata, 0, MAX_TEST_DATA_SIZE);
 		memset(result_buf, 0, MAX_BUF_LEN);
-		fts_get_test_result(result_buf, testdata, PAGE_SIZE);
+		fts_get_test_result(result_buf, testdata, MAX_TEST_DATA_SIZE+MAX_BUF_LEN);
 		/* result */
 		iTestDataLen = 0;
-		strncat(buf, result_buf, PAGE_SIZE - iTestDataLen);
+		strncat(buf, result_buf, (4*PAGE_SIZE)  - iTestDataLen);
 
-		/* rawdata cbdata */
-		iTestDataLen = strlen(buf);
-		strncat(buf, testdata, (2*PAGE_SIZE) - iTestDataLen -1);
+		/* rawdata cbdata noisedata */
+		iTestDataLen = strnlen(buf, 4*PAGE_SIZE);
+		strncat(buf, testdata, (4*PAGE_SIZE) - iTestDataLen -1);
 
-		num_read_chars = strnlen(buf, PAGE_SIZE);
+		num_read_chars = strnlen(buf, 4*PAGE_SIZE);
 
 ERROR:
 		if (result_reason_flag == 0)
@@ -780,19 +854,17 @@ ERROR:
 			num_read_chars = strnlen(buf, PAGE_SIZE);
 		}
 		FTS_COMMON_DBG("*************num_read_chars[%zd]", num_read_chars);
-		FTS_COMMON_DBG("Last All Result:[%s]", buf);
 		FTS_COMMON_DBG("*************END FTS CapData Test*************\n");	
 		free_test_param_data();
 	}
 
-	if(NULL != testdata) vfree(testdata);
-	FTS_DBG(" END.");
-
-	if (fts_full_raw_max_cap)
+	if(NULL != testdata)
 	{
-		vfree(fts_full_raw_max_cap);
-		fts_full_raw_max_cap = NULL;
+		vfree(testdata);
+		testdata = NULL;
 	}
+
+	FTS_DBG(" END.");
 
 	return num_read_chars;
 }

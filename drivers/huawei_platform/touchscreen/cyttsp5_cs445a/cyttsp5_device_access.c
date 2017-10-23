@@ -1,4 +1,26 @@
-
+/*
+ * cyttsp5_device_access.c
+ * Cypress TrueTouch(TM) Standard Product V5 Device Access Module.
+ * Configuration and Test command/status user interface.
+ * For use with Cypress Txx5xx parts.
+ * Supported parts include:
+ * TMA5XX
+ *
+ * Copyright (C) 2012-2014 Cypress Semiconductor
+ *
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License
+ * version 2, and only version 2, as published by the
+ * Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * Contact Cypress Semiconductor at www.cypress.com <ttdrivers@cypress.com>
+ *
+ */
 
 #include "cyttsp5_regs.h"
 
@@ -576,7 +598,76 @@ static int prepare_print_buffer(int status, u8 *in_buf, int length,
 
 	return index;
 }
+ssize_t cyttsp5_run_and_get_selftest_result_noprint(struct device *dev,
+		u8 test_id, u16 read_length, bool get_result_on_pass)
+{
+	struct cyttsp5_device_access_data *dad
+		= cyttsp5_get_device_access_data(dev);
+	int status = STATUS_FAIL;
+	u8 cmd_status = 0;
+	u8 summary_result = 0;
+	u16 act_length = 0;
+	int rc;
 
+	mutex_lock(&dad->sysfs_lock);
+
+	rc = cmd->request_exclusive(dev, CY_REQUEST_EXCLUSIVE_TIMEOUT);
+	if (rc < 0) {
+		tp_log_err("%s: Error on request exclusive r=%d\n",	__func__, rc);
+		goto resealse_lock;
+	}
+	rc = cyttsp5_suspend_scan_cmd_(dev);
+	if (rc < 0) {
+		tp_log_err("%s: Error on suspend scan r=%d\n", __func__, rc);
+		goto release_exclusive;
+	}
+
+	rc = cyttsp5_run_selftest_cmd_(dev, test_id, 0,
+			&cmd_status, &summary_result, NULL);
+	if (rc < 0) {
+		tp_log_err("%s: Error on run self test for test_id:%d r=%d\n",
+					__func__, test_id, rc);
+		goto resume_scan;
+	}
+
+	/* Form response buffer */
+	dad->ic_buf[0] = cmd_status;
+	dad->ic_buf[1] = summary_result;
+
+	/* Get data if command status is success */
+	if (cmd_status != CY_CMD_STATUS_SUCCESS)
+		goto status_success;
+
+	/* Get data unless test result is pass */
+	if (summary_result == CY_ST_RESULT_PASS && !get_result_on_pass)
+		goto status_success;
+
+	rc = cyttsp5_get_selftest_result_cmd_(dev, 0, read_length,
+			test_id, &cmd_status, &act_length, &dad->ic_buf[6]);
+	if (rc < 0) {
+		tp_log_err("%s: Error on get self test result r=%d\n", __func__, rc);
+		goto resume_scan;
+	}
+
+	dad->ic_buf[2] = cmd_status;
+	dad->ic_buf[3] = test_id;
+	dad->ic_buf[4] = LOW_BYTE(act_length);
+	dad->ic_buf[5] = HI_BYTE(act_length);
+
+status_success:
+	status = STATUS_SUCCESS;
+
+resume_scan:
+	cyttsp5_resume_scan_cmd_(dev);
+
+release_exclusive:
+	cmd->release_exclusive(dev);
+
+resealse_lock:
+	mutex_unlock(&dad->sysfs_lock);
+
+	return status;
+}
 static ssize_t cyttsp5_panel_scan_show(struct device *dev,
 		struct cyttsp5_attribute *attr, char *buf)
 {

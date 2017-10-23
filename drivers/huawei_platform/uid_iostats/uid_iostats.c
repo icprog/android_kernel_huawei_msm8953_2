@@ -334,17 +334,8 @@ static ssize_t ioflowmeter_rm_uid_write(struct file *file,
 			const char __user *buffer, size_t count, loff_t *ppos)
 {
 	char *uids = NULL;
-	size_t uid_len = 0;
 
-	if (count >= ((size_t) - 1)) {
-		pr_err("%s: the buffer from user is too big\n", __func__);
-		return -EFAULT;
-	}
-	else {
-		uid_len = count + 1;
-	}
-
-	uids = kzalloc(uid_len, GFP_KERNEL);
+	uids = kzalloc(count + 1, GFP_KERNEL);
 	if (!uids)
 		return -EFAULT;
 
@@ -353,7 +344,7 @@ static ssize_t ioflowmeter_rm_uid_write(struct file *file,
 		return -EFAULT;
 	}
 
-	uids[uid_len - 1] = '\0';
+	uids[count] = '\0';
 
 	ioflowmeter_uid_action(uids, ACTION_REMOVE);
 
@@ -376,17 +367,8 @@ static ssize_t ioflowmeter_add_uid_write(struct file *file,
 			const char __user *buffer, size_t count, loff_t *ppos)
 {
 	char *uids = NULL;
-	size_t uid_len = 0;
 
-	if (count >= ((size_t) - 1)) {
-		pr_err("%s: the buffer from user is too big\n", __func__);
-		return -EFAULT;
-	}
-	else {
-		uid_len = count + 1;
-	}
-
-	uids = kzalloc(uid_len, GFP_KERNEL);
+	uids = kzalloc(count + 1, GFP_KERNEL);
 	if (!uids) {
 		pr_err("%s: cannot alloc the uids\n", __func__);
 		return -EFAULT;
@@ -398,7 +380,7 @@ static ssize_t ioflowmeter_add_uid_write(struct file *file,
 		return -EFAULT;
 	}
 
-	uids[uid_len - 1] = '\0';
+	uids[count] = '\0';
 
 	ioflowmeter_uid_action(uids, ACTION_ADD);
 
