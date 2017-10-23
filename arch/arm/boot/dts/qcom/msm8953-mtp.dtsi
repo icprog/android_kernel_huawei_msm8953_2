@@ -121,13 +121,12 @@
 	qcom,cons-sync-write-delay-us = <1000>;
 };
 
-/*
 &flash_led {
 	compatible = "qcom,qpnp-flash-led";
 	reg = <0xd300 0x100>;
 	qcom,follow-otst2-rb-disabled;
 };
-*/
+
 
 #include "msm8953-mdss-panels.dtsi"
 
