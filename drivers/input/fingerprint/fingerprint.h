@@ -80,6 +80,7 @@ struct fp_data
     int module_vendor_info;
     int navigation_adjust1;
     int navigation_adjust2;
+    unsigned int snr_stat;
     struct input_dev* input_dev;
     int irq_num;
     int irq;
@@ -92,6 +93,7 @@ struct fp_data
     unsigned int sensor_id;
     unsigned int autotest_input;
     struct regulator *vdd;
+    struct regulator *avdd;
     struct pinctrl* pctrl;
     struct pinctrl_state* pins_default;
     struct pinctrl_state* pins_idle;

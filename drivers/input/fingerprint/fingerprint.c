@@ -22,6 +22,7 @@
 #include <linux/fb.h>
 #endif
 extern void adreno_force_waking_gpu(void);
+unsigned int snr_flag = 0;
 
 #if defined (CONFIG_HUAWEI_DSM)
 #include <dsm/dsm_pub.h>
@@ -110,6 +111,33 @@ static ssize_t read_image_flag_store(struct device* device,
 
 static DEVICE_ATTR(read_image_flag, S_IRUSR | S_IWUSR, read_image_flag_show, read_image_flag_store);
 
+static ssize_t snr_show(struct device* device,
+                       struct device_attribute* attribute,
+                       char* buffer)
+{
+    struct fp_data* fingerprint = dev_get_drvdata(device);
+    return scnprintf(buffer, PAGE_SIZE, "%d", fingerprint->snr_stat);
+}
+
+static ssize_t snr_store(struct device* device,
+                       struct device_attribute* attribute,
+                       const char* buffer, size_t count)
+{
+    struct fp_data* fingerprint = dev_get_drvdata(device);
+    fingerprint->snr_stat = simple_strtoul(buffer, NULL, 10);
+    if (fingerprint->snr_stat)
+    {
+        snr_flag = 1;
+    }
+    else
+        snr_flag = 0;
+
+    fpc_log_err("snr_store snr_flag = %u\n", snr_flag);
+    return count;
+}
+
+static DEVICE_ATTR(snr, S_IRUSR | S_IWUSR |S_IRGRP |S_IWGRP, snr_show, snr_store);
+
 static ssize_t fingerprint_chip_info_show(struct device *device, struct device_attribute *attribute, char *buf)
 {
     char module[5] = {0};
@@ -167,6 +195,7 @@ static struct attribute* attributes[] =
     &dev_attr_fingerprint_chip_info.attr,
     &dev_attr_result.attr,
     &dev_attr_read_image_flag.attr,
+    &dev_attr_snr.attr,
     NULL
 };
 
@@ -234,6 +263,7 @@ int fingerprint_get_dts_data(struct device *dev, struct fp_data *fingerprint)
     struct device_node *np;
     int ret = 0;
     char const *fingerprint_vdd = NULL;
+    char const *fingerprint_avdd = NULL;
     if (!dev || !dev->of_node)
     {
         fpc_log_err("dev or dev node is NULL\n");
@@ -282,7 +312,22 @@ int fingerprint_get_dts_data(struct device *dev, struct fp_data *fingerprint)
         fingerprint->vdd = regulator_get(dev, fingerprint_vdd);
         if (IS_ERR(fingerprint->vdd))
         {
-            fpc_log_err("failed to get regulator\n");
+            fpc_log_err("failed to get vdd regulator\n");
+        }
+    }
+
+    ret = of_property_read_string(dev->of_node, "fingerprint,avdd", &fingerprint_avdd);
+    if (ret)
+    {
+        fpc_log_err("failed to get avdd from device tree, some project don't need this power\n");
+    }
+
+    if (fingerprint_avdd)
+    {
+        fingerprint->avdd = regulator_get(dev, fingerprint_avdd);
+        if (IS_ERR(fingerprint->avdd))
+        {
+            fpc_log_err("failed to get avdd regulator\n");
         }
     }
     return 0;
@@ -393,6 +438,26 @@ static int fingerprint_power_init(struct fp_data* fingerprint)
     int error = 0;
 
     fpc_log_info("Enter!\n");
+
+    if (fingerprint->avdd)
+    {
+        error = regulator_set_voltage(fingerprint->avdd, 2800000, 3000000);
+        if (error)
+        {
+            fpc_log_err("set avdd voltage failed\n");
+            goto out_err;
+        }
+        error = regulator_enable(fingerprint->avdd);
+        if (error)
+        {
+            fpc_log_err("enable avdd failed\n");
+            goto out_err;
+        }
+    }
+    else
+    {
+        fpc_log_err("fingerprint->avdd is NULL, some project don't need this power\n");
+    }
 
     if (fingerprint->vdd)
     {
@@ -907,7 +972,7 @@ static int fingerprint_probe(struct spi_device* spi)
         goto exit;
     }
 
-    fingerprint->wakeup_enabled = true;
+    fingerprint->wakeup_enabled = false;
 
     fingerprint->pf_dev= platform_device_alloc(FP_DEV_NAME, -1);
     if (!fingerprint->pf_dev)
@@ -939,6 +1004,7 @@ static int fingerprint_probe(struct spi_device* spi)
     irqf = IRQF_TRIGGER_RISING | IRQF_ONESHOT | IRQF_NO_SUSPEND;
 
     device_init_wakeup(dev, 1);
+    wake_lock_init(&fingerprint->ttw_wl, WAKE_LOCK_SUSPEND, "fpc_ttw_wl");
 
     mutex_init(&fingerprint->lock);
     error = devm_request_threaded_irq(dev, fingerprint->irq,
@@ -955,8 +1021,9 @@ static int fingerprint_probe(struct spi_device* spi)
 
     /* Request that the interrupt should be wakeable */
     enable_irq_wake(fingerprint->irq);
+    fingerprint->wakeup_enabled = true;
+    fingerprint->snr_stat = 0;
 
-    wake_lock_init(&fingerprint->ttw_wl, WAKE_LOCK_SUSPEND, "fpc_ttw_wl");
 
 #if defined(CONFIG_FB)
     if (fingerprint->fb_notify.notifier_call == NULL)
