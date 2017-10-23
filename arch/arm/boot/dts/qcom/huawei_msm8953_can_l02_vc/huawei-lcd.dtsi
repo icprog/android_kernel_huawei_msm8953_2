@@ -7,6 +7,7 @@
 
 #include "hw-panel-boe_nt35596s_5p0_1080p_video.dtsi"
 #include "hw-panel-boe_td4300_5p0_1080p_video.dtsi"
+#include "hw-panel-ctc_td4310_5p0_1080p_video.dtsi"
 #include "hw-panel-jdi_sd6fa1_5p0_1080p_video.dtsi"
 #include "hw-panel-lg_td4300_5p0_1080p_video.dtsi"
 #include "hw-panel-tianma_td4300_5p0_1080p_video.dtsi"

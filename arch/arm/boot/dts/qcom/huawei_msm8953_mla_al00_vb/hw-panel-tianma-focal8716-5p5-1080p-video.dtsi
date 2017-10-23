@@ -28,8 +28,8 @@
 		qcom,mdss-dsi-stream = <0>;
 		qcom,mdss-dsi-panel-width = <1080>;
 		qcom,mdss-dsi-panel-height = <1920>;
-		qcom,mdss-dsi-h-front-porch = <92>;
-		qcom,mdss-dsi-h-back-porch = <92>;
+		qcom,mdss-dsi-h-front-porch = <98>;
+		qcom,mdss-dsi-h-back-porch = <98>;
 		qcom,mdss-dsi-h-pulse-width = <10>;
 		qcom,mdss-dsi-h-sync-skew = <0>;
 		qcom,mdss-dsi-v-back-porch = <20>;
@@ -82,8 +82,7 @@
 		qcom,mdss-dsi-lane-1-state;
 		qcom,mdss-dsi-lane-2-state;
 		qcom,mdss-dsi-lane-3-state;
-		qcom,mdss-dsi-panel-timings = [E6 38 26 00 68 6E 2A 3C 2C 03 04 00];
-		qcom,mdss-dsi-panel-timings-8996 = [24 1f 08 09 05 03 04 a0
+		qcom,mdss-dsi-panel-timings = [24 1f 08 09 05 03 04 a0
 		24 1f 08 09 05 03 04 a0
 		24 1f 08 09 05 03 04 a0
 		24 1f 08 09 05 03 04 a0

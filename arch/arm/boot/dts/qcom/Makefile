@@ -230,6 +230,7 @@ dtb-$(CONFIG_ARCH_MSM8953) += msm8953-mtp.dtb \
 	huawei-mla-al00-vb.dtb \
 	huawei-mla-al00-vc.dtb \
 	huawei-mla-al00-vd.dtb \
+	huawei-mla-al00-ve.dtb \
 	huawei-mla-tl00-va.dtb \
 	huawei-mla-l01-va.dtb \
 	huawei-mla-l01-vb.dtb \
@@ -238,6 +239,7 @@ dtb-$(CONFIG_ARCH_MSM8953) += msm8953-mtp.dtb \
 	huawei-can-al00-va.dtb \
 	huawei-can-al00-vb.dtb \
 	huawei-can-al00-vc.dtb \
+	huawei-can-al00-vd.dtb \
 	huawei-can-cl00-va.dtb \
 	huawei-can-tl00-va.dtb \
 	huawei-can-l01-va.dtb \

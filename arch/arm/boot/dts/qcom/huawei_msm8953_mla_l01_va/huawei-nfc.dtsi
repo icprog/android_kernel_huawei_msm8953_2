@@ -20,7 +20,7 @@
 		nfc_nxp_conf_name = "libnfc_nxp_mla.conf";
 		nfc_brcm_conf_name = "libnfc_brcm_mla.conf";
 		nfc_card_num = <0x1>;
-		nfc_chip_type = "pn547";
+		nfc_chip_type = "pn548";
 		status = "ok";
 	};
 };

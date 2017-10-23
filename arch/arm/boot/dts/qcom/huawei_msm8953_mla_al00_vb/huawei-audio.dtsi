@@ -17,7 +17,7 @@
 		speaker-pa = "max98925";
 		builtin-master-mic-exist;
 		builtin-second-mic-exist;
-		hand_held_dual_mic_strategy;
+		hand_held_master_mic_strategy;
 		loud_speaker_second_mic_strategy;
 		speaker-box = "none", "AAC", "GOER", "LC";
 		spk-box-id = <&tlmm 89 0>;
@@ -78,7 +78,7 @@
 	qcom,msm-ext-pa = "quinary";
 	qcom,msm-hs-micbias-type = "external";
 	qcom,msm-mbhc-hphl-swh = <1>;
-
+	speaker-pa = "max98925";
 	qcom,msm-gpios =
 		"pri_i2s",
 		"quin_i2s";

@@ -78,7 +78,7 @@
 	qcom,msm-ext-pa = "quinary";
 	qcom,msm-hs-micbias-type = "external";
 	qcom,msm-mbhc-hphl-swh = <1>;
-
+	speaker-pa = "max98925";
 	qcom,msm-gpios =
 		"pri_i2s",
 		"quin_i2s";

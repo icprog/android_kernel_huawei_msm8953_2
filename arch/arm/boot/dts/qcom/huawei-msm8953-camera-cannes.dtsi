@@ -130,6 +130,7 @@
 	/delete-node/ qcom,actuator@1;
 	/delete-node/ qcom,eeprom@0;
 	/delete-node/ qcom,eeprom@1;
+        /delete-node/ qcom,eeprom@2;
 	/delete-node/ qcom,camera@0;
 	/delete-node/ qcom,camera@1;
 	/delete-node/ qcom,camera@2;
@@ -141,7 +142,7 @@
 		qcom,cci-master = <0>;
 	};
 
-	eeprom_cannes_0: qcom,eeprom@2 {
+	eeprom_cannes_0: qcom,eeprom@3 {
 		cell-index = <0>;
 		reg = <0x0>;
 		qcom,eeprom-name = "gt24c64a";

@@ -161,6 +161,7 @@
 	/delete-node/ qcom,actuator@1;
 	/delete-node/ qcom,eeprom@0;
 	/delete-node/ qcom,eeprom@1;
+	/delete-node/ qcom,eeprom@2;
 	/delete-node/ qcom,camera@0;
 	/delete-node/ qcom,camera@1;
 	/delete-node/ qcom,camera@2;
@@ -189,10 +190,10 @@
 		qcom,gpio-req-tbl-label = "CAM_FLASH_WP0";
 	};
 
-	eeprom_milan_0: qcom,eeprom@2 {
+	eeprom_milan_0: qcom,eeprom@3 {
 		cell-index = <0>;
 		reg = <0x0>;
-		qcom,eeprom-name = "imx298_liteon";
+		qcom,eeprom-name = "imx298_liteon_foxconn";
 		compatible = "qcom,eeprom";
 		qcom,slave-addr = <0xa0>;
 		qcom,cci-master = <0>;
@@ -234,7 +235,7 @@
 		status = "ok";
 	};
 
-	eeprom_milan_1: qcom,eeprom@3 {
+	eeprom_milan_1: qcom,eeprom@4 {
 		cell-index = <1>;
 		reg = <0x1>;
 		qcom,eeprom-name = "imx298_lg_sunny";

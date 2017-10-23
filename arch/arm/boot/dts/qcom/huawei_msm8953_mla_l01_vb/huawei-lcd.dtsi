@@ -7,6 +7,7 @@
 
 #include "hw-panel-boe-otm1906c-5p5-1080p-cmd.dtsi"
 #include "hw-panel-boe-td4322-5p5-1080p-cmd.dtsi"
+#include "hw-panel-ctc_nt35596s_5p5_1080p_video.dtsi"
 #include "hw-panel-ctc-otm1906c-5p5-1080p-cmd.dtsi"
 #include "hw-panel-jdi-r63452-5p5-1080p-cmd.dtsi"
 #include "hw-panel-tianma-focal8716-5p5-1080p-video.dtsi"

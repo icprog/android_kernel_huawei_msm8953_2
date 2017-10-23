@@ -4,6 +4,5 @@
 		status = "ok";
 		bt,fw_ver = "QCOM_WCN3660B_2.0.2";
 		bt,chiptype = "BT_FM_QUALCOMM_WCN3660B";
-		bt,power_level = "level7";
 	};
 };

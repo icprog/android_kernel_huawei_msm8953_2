@@ -48,6 +48,10 @@
 					29 01 00 00 00 00 04 F3 02 00 B4
 					39 01 00 00 00 00 02 53 0C
 					39 01 00 00 00 00 02 55 00
+					29 01 00 00 00 00 02 D6 01
+					29 01 00 00 00 00 1F C7 00 09 13 22 30 3D 45 52 35 3D 4B 5C 70 78 7A 00 09 13 22 30 3D 45 52 35 3D 4B 5C 70 78 7A
+					29 01 00 00 00 00 14 C8 01 00 09 04 FF FC 00 00 08 09 05 FC 00 00 09 01 F6 FC 00
+					29 01 00 00 00 00 2C CA 1D FC FC FC 00 00 00 00 00 00 F0 F0 00 40 00 00 00 00 00 00 00 D0 CE 95 87 CF 93 86 3D 00 00 00 00 00 00 00 00 00 00 00 00 00 00
 					05 01 00 00 64 00 02 11 00
 					05 01 00 00 14 00 02 29 00];
 		qcom,mdss-dsi-off-command = [05 01 00 00 20 00 02 28 00
@@ -68,8 +72,7 @@
 		qcom,mdss-dsi-te-dcs-command = <1>;
 		qcom,mdss-dsi-te-check-enable;
 		qcom,mdss-dsi-te-using-te-pin;
-		qcom,mdss-dsi-panel-timings = [E6 38 26 00 68 6E 2A 3C 2C 03 04 00];
-		qcom,mdss-dsi-panel-timings-8996 = [24 1f 08 09 05 03 04 a0
+		qcom,mdss-dsi-panel-timings = [24 1f 08 09 05 03 04 a0
 		24 1f 08 09 05 03 04 a0
 		24 1f 08 09 05 03 04 a0
 		24 1f 08 09 05 03 04 a0
@@ -96,7 +99,16 @@
 		qcom,column-inversion-cmds-dsi-state = "dsi_lp_mode";
 		qcom,panel-esd-check-enabled;
 		qcom,panel-esd-read-commands = [06 01 00 01 05 00 02 0A 1C];
+		qcom,panel-dsm-check-enabled;
+		qcom,panel-dsm-read-commands = [06 01 00 01 05 00 02 05 00
+                               06 01 00 01 05 00 02 0A 1C
+                               06 01 00 01 05 00 02 0B 00
+                               06 01 00 01 05 00 02 0C 77
+                               06 01 00 01 05 00 02 0D 00
+                               06 01 00 01 05 00 02 0E 00
+                               06 01 00 01 05 00 02 0F 40];
 		qcom,esd-read-cmds-state = "dsi_hs_mode";
+		qcom,dsm-read-cmds-state = "dsi_hs_mode";
 		qcom,mdss-dsi-lp11-init;
 		qcom,mdss-dsi-tx-eot-append;
 		qcom,mdss-dsi-rx-eot-ignore;
