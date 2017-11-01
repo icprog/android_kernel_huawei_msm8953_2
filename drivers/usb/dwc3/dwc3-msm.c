@@ -1924,11 +1924,10 @@ static int dwc3_msm_prepare_suspend(struct dwc3_msm *mdwc)
 {
 	unsigned long timeout;
 	u32 reg = 0;
-	struct dwc3 *dwc = platform_get_drvdata(mdwc->dwc3);
 
 	if ((mdwc->in_host_mode || (mdwc->vbus_active
 			&& mdwc->otg_state == OTG_STATE_B_SUSPEND))
-			&& dwc3_msm_is_superspeed(mdwc) && !mdwc->in_restart) {
+			&& dwc3_msm_is_superspeed(mdwc)) {
 		if (!atomic_read(&mdwc->in_p3)) {
 			dev_err(mdwc->dev, "Not in P3,aborting LPM sequence\n");
 			return -EBUSY;
