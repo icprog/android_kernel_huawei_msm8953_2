@@ -347,7 +347,7 @@ EXPORT_SYMBOL(dsm_get_cpu_temp);
 #endif
 
 
-int get_antenna_sub_board_voltage(void)
+int get_pmi_sub_voltage(void)
 {
 	int rc = 0;
 	struct qpnp_vadc_result results;
@@ -378,32 +378,34 @@ int get_antenna_sub_board_voltage(void)
 
 	if (NULL == qpnp_pmi_vadc) {
 		pr_err("Error qpnp_pmi_vadc is NULL\n");
-		goto fail_get_ldo;
+		goto fail_put_ldo;
 	}
 
 	rc = qpnp_vadc_read(qpnp_pmi_vadc,P_MUX1_1_1, &results);
 	if (rc) {
 		pr_err("Unable to read sub board temp rc=%d\n", rc);
-		return 0;
+	} else {
+		pr_info("get_pmi_sub_voltage %d %lld\n", results.adc_code, results.physical);
 	}
-	pr_info("get_antenna_sub_board_voltage %d %lld\n", results.adc_code, results.physical);
 
 	err = regulator_disable(ldo16);
 	if (err) {
 		pr_err("ldo16 disable failed, err=%d\n", err);
 		goto fail_put_ldo;
 	}
+	regulator_put(ldo16);
 	return results.physical/1000;
+
 fail_put_ldo:
 	regulator_put(ldo16);
 fail_get_ldo:
 	return err_result;
 }
-
+EXPORT_SYMBOL(get_pmi_sub_voltage);
 static int get_sub_board_voltage(char *buf, struct kernel_param *kp)
 {
 	int voltage = 0;
-	voltage = get_antenna_sub_board_voltage();
+	voltage = get_pmi_sub_voltage();
 	return snprintf(buf, BUF_MAX_LENGTH, "%d", voltage);
 }
 
