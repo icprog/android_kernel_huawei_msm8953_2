@@ -1236,7 +1236,6 @@ static void iface_stat_update_from_skb(const struct sk_buff *skb,
 		    wifipro_update_tcp_statistics(WIFIPRO_TCP_MIB_OUTSEGS, skb, NULL);
 		}
 #endif
-	}
 
 	spin_lock_bh(&iface_stat_list_lock);
 	entry = get_iface_entry(el_dev->name);
