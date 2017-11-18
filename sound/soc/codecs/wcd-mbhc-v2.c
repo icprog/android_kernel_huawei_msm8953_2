@@ -1278,12 +1278,13 @@ static void wcd_correct_swch_plug(struct work_struct *work)
 		plug_type = MBHC_PLUG_TYPE_GND_MIC_SWAP;
 		pr_debug("%s: Plug found, plug type is %d\n",
 			 __func__, plug_type);
-
 	if (is_bootmode_factory
 		&& ((MBHC_PLUG_TYPE_HIGH_HPH == plug_type) ||
 			(MBHC_PLUG_TYPE_GND_MIC_SWAP == plug_type))) {
 			pr_info("%s: force the type change to headset from %d\n", __func__, plug_type);
 			plug_type = MBHC_PLUG_TYPE_HEADSET;
+	}
+		goto correct_plug_type;
 	}
 
 	if ((plug_type == MBHC_PLUG_TYPE_HEADSET ||
@@ -1381,7 +1382,7 @@ correct_plug_type:
 					 */
 					if (g_enable_headset_compatible) {
 						pr_debug("%s: switch didnt work, modify swap to hph\n",
-						  __func__);
+ 						  __func__);
 						plug_type = MBHC_PLUG_TYPE_HIGH_HPH;
 						goto report_swap;
 					} else {
@@ -1770,7 +1771,7 @@ static int wcd_cancel_vol_btn_work(struct wcd_mbhc *mbhc)
 	int r;
 
 	if (!g_enable_headset_compatible)
-		return 0;
+ 	    return 0;
 
 	if (NULL == mbhc)
 		return 0;
@@ -1888,7 +1889,7 @@ static bool  process_vol_btn_press_for_hph(struct wcd_mbhc *mbhc)
 				wcd_mbhc_jack_report(mbhc, &mbhc->button_jack,
 									0, SND_JACK_BTN_2);
 			}
-			vol_up_hph_btn.btn_reported = true;
+     		vol_up_hph_btn.btn_reported = true;
 		} else if (vol_up_hph_btn.btn_reported   /*btn had been pressed*/
 			&& !vol_up_hph_btn.btn_press_first   /*first btn had been report*/
 			&& vol_up_hph_btn.elec_irq_count >=  /*press for enough time*/
@@ -2190,7 +2191,8 @@ static irqreturn_t wcd_mbhc_btn_press_handler(int irq, void *data)
 		pr_debug("%s: Switch level is low ", __func__);
 		goto done;
 	}
-	mbhc->btn_press_intr = true;
+
+	mbhc->is_btn_press = true;
 	if (time_before(jiffies, timeout_jiffies)) {
 		if (!ispress) {
 			audio_dsm_report_num(DSM_AUDIO_HANDSET_PLUG_PRESS_ERROR,
@@ -2200,7 +2202,6 @@ static irqreturn_t wcd_mbhc_btn_press_handler(int irq, void *data)
 		timeout_jiffies = jiffies + msecs_to_jiffies(DSM_AUDIO_LESS_HS_GAP);
 		ispress = true;
 	}
-
 	msec_val = jiffies_to_msecs(jiffies - mbhc->jiffies_atreport);
 	pr_debug("%s: msec_val = %ld\n", __func__, msec_val);
 	if (msec_val < MBHC_BUTTON_PRESS_THRESHOLD_MIN) {
